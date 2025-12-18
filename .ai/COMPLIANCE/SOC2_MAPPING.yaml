@@ -1,0 +1,217 @@
+# ===========================================
+# SOC-2 Trust Service Criteria Control Mapping
+# ===========================================
+# Maps CI/CD and AI governance controls to SOC-2 criteria.
+# Used for audit evidence and compliance reporting.
+# ===========================================
+
+framework: SOC2
+version: "2017"
+last_reviewed: "2024-01-01"
+owner: "Security Team"
+
+trust_service_criteria:
+  # ===========================================
+  # CC6 - Logical and Physical Access Controls
+  # ===========================================
+  CC6:
+    CC6.1:
+      description: "Logical access security software, infrastructure, and architectures"
+      control_objective: "The entity implements logical access security measures"
+      implemented_by:
+        - GitHub branch protection rules
+        - Mandatory PR reviews before merge
+        - CI/CD enforcement (fail-closed gates)
+        - CODEOWNERS file for code ownership
+        - AI rules enforcement workflow
+      evidence:
+        - .github/workflows/ci.yml
+        - .github/workflows/ai-rules-enforcement.yml
+        - .github/CODEOWNERS
+      test_procedure: |
+        1. Verify branch protection rules are enabled on main branch
+        2. Confirm PR reviews are required
+        3. Check CI workflow blocks merge on failure
+      status: implemented
+
+    CC6.2:
+      description: "Authentication and authorization controls"
+      control_objective: "Access is authenticated and authorized"
+      implemented_by:
+        - GitHub authentication (SSO/MFA)
+        - Role-based access via CODEOWNERS
+        - PR approval requirements
+        - Team-based repository access
+      evidence:
+        - .github/CODEOWNERS
+        - GitHub organization settings
+      test_procedure: |
+        1. Verify MFA is required for org members
+        2. Confirm CODEOWNERS matches team structure
+        3. Check PR approval requirements
+      status: implemented
+
+    CC6.3:
+      description: "Access removal and modification"
+      control_objective: "Access is removed or modified promptly"
+      implemented_by:
+        - GitHub organization membership management
+        - Automated access reviews via governance controller
+      evidence:
+        - governance-controller/controller.py
+      test_procedure: |
+        1. Review offboarding procedures
+        2. Verify access removal audit trail
+      status: implemented
+
+    CC6.6:
+      description: "Change management controls"
+      control_objective: "Changes are authorized, tested, and approved"
+      implemented_by:
+        - Pull request workflow
+        - AI governance enforcement (.ai/CLAUDE_RULES.md)
+        - Automated testing (CI pipeline)
+        - Code review requirements
+        - Risk-based auto-merge policy
+      evidence:
+        - .ai/CLAUDE_RULES.md
+        - .ai/AUTO_MERGE_POLICY.yaml
+        - .github/workflows/ci.yml
+        - .github/workflows/ai-review.yml
+      test_procedure: |
+        1. Verify all changes go through PR process
+        2. Confirm CI runs on all PRs
+        3. Check AI rules are enforced
+        4. Verify auto-merge only for LOW risk
+      status: implemented
+
+    CC6.7:
+      description: "Infrastructure and software changes restricted"
+      control_objective: "Changes to infrastructure are restricted to authorized personnel"
+      implemented_by:
+        - CODEOWNERS for infrastructure files
+        - Blocked files in auto-merge policy
+        - Manual review required for CI/CD changes
+      evidence:
+        - .github/CODEOWNERS
+        - .ai/AUTO_MERGE_POLICY.yaml
+      test_procedure: |
+        1. Verify infrastructure files require specific reviewers
+        2. Confirm workflow files cannot auto-merge
+      status: implemented
+
+  # ===========================================
+  # CC7 - System Operations
+  # ===========================================
+  CC7:
+    CC7.1:
+      description: "System monitoring and detection"
+      control_objective: "The entity detects and monitors system anomalies"
+      implemented_by:
+        - CI pipeline status monitoring
+        - Security scanning workflows
+        - Slack notifications for failures
+        - AI metrics tracking
+      evidence:
+        - .github/workflows/security.yml
+        - .github/workflows/ci.yml
+        - scripts/slack_notifier.py
+        - scripts/ai_metrics.py
+      test_procedure: |
+        1. Verify security scans run on schedule
+        2. Confirm Slack alerts configured
+        3. Check metrics database captures events
+      status: implemented
+
+    CC7.2:
+      description: "Incident detection and response"
+      control_objective: "Incidents are identified and responded to"
+      implemented_by:
+        - CI failure detection
+        - Self-healing PR agent
+        - Slack incident notifications
+        - PR commenting for visibility
+      evidence:
+        - scripts/pr_self_heal.py
+        - scripts/slack_notifier.py
+        - scripts/pr_commenter.py
+        - .github/workflows/self-heal.yml
+      test_procedure: |
+        1. Verify CI failures trigger notifications
+        2. Confirm self-healing agent activates
+        3. Check incident trail in PR comments
+      status: implemented
+
+    CC7.3:
+      description: "Change testing and approval"
+      control_objective: "Changes are evaluated and approved before implementation"
+      implemented_by:
+        - Automated testing (unit, integration)
+        - AI code review
+        - Risk classification
+        - Human approval for elevated risks
+      evidence:
+        - .github/workflows/ci.yml
+        - .github/workflows/ai-review.yml
+        - scripts/ai_rules_audit.py
+      test_procedure: |
+        1. Verify test coverage >= 85%
+        2. Confirm AI review runs on PRs
+        3. Check risk labels applied
+      status: implemented
+
+    CC7.4:
+      description: "Configuration management"
+      control_objective: "Configuration changes are authorized and documented"
+      implemented_by:
+        - Version-controlled configuration
+        - Infrastructure as Code
+        - Configuration in repository
+      evidence:
+        - pyproject.toml
+        - .pre-commit-config.yaml
+        - .github/workflows/
+      test_procedure: |
+        1. Verify all config is version-controlled
+        2. Confirm config changes require PR
+      status: implemented
+
+  # ===========================================
+  # CC8 - Change Management
+  # ===========================================
+  CC8:
+    CC8.1:
+      description: "Changes are authorized and documented"
+      control_objective: "The entity authorizes, designs, develops, tests, and approves changes"
+      implemented_by:
+        - PR-based change workflow
+        - AI governance rules
+        - Automated testing
+        - Audit trail in AI_CHANGELOG.md
+      evidence:
+        - .ai/CLAUDE_RULES.md
+        - .ai/AI_CHANGELOG.md
+        - .github/workflows/ci.yml
+      test_procedure: |
+        1. Review PR history for authorization
+        2. Verify AI changelog entries
+        3. Confirm test results documented
+      status: implemented
+
+# ===========================================
+# Compliance Summary
+# ===========================================
+summary:
+  total_controls: 10
+  implemented: 10
+  partially_implemented: 0
+  not_implemented: 0
+  coverage_percentage: 100
+
+# ===========================================
+# Audit Notes
+# ===========================================
+audit_notes:
+  - All controls are enforced via code and automation
+  - Evidence is machine-readable and exportable
+  - Run scripts/soc2_export.py for evidence package

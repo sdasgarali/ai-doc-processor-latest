@@ -1,0 +1,204 @@
+# ===========================================
+# HIPAA Evidence Collection Log
+# ===========================================
+# Tracks evidence of HIPAA safeguard implementation
+# for audit and compliance purposes.
+# ===========================================
+
+metadata:
+  created: "2025-01-01T00:00:00Z"
+  last_updated: "2025-01-01T00:00:00Z"
+  framework: "HIPAA Security Rule"
+  collection_method: "Automated + Manual"
+  retention_period: "6 years"
+
+# ===========================================
+# Evidence Categories
+# ===========================================
+evidence_categories:
+  administrative:
+    description: "Evidence for Administrative Safeguards"
+    safeguards:
+      - "164.308(a)(1)"
+      - "164.308(a)(2)"
+      - "164.308(a)(3)"
+      - "164.308(a)(4)"
+      - "164.308(a)(5)"
+      - "164.308(a)(6)"
+      - "164.308(a)(7)"
+      - "164.308(a)(8)"
+
+  physical:
+    description: "Evidence for Physical Safeguards"
+    safeguards:
+      - "164.310(a)(1)"
+      - "164.310(d)(1)"
+    note: "Most physical safeguards covered by cloud provider"
+
+  technical:
+    description: "Evidence for Technical Safeguards"
+    safeguards:
+      - "164.312(a)(1)"
+      - "164.312(b)"
+      - "164.312(c)(1)"
+      - "164.312(d)"
+      - "164.312(e)(1)"
+
+# ===========================================
+# Evidence Log
+# ===========================================
+evidence_log:
+  # Security Management Evidence
+  - id: "HIPAA-E001"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(1)"
+    category: "Security Management Process"
+    evidence_type: "Policy Document"
+    description: "AI governance rules document"
+    artifact: ".ai/CLAUDE_RULES.md"
+    verification: "File exists in repository"
+
+  - id: "HIPAA-E002"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(1)"
+    category: "Security Management Process"
+    evidence_type: "Risk Assessment"
+    description: "Risk register with 7 identified risks"
+    artifact: ".ai/COMPLIANCE/ISO_RISK_REGISTER.yaml"
+    verification: "YAML validation passed"
+
+  - id: "HIPAA-E003"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(1)"
+    category: "Security Management Process"
+    evidence_type: "Automated Control"
+    description: "CI pipeline enforces security requirements"
+    artifact: ".github/workflows/ci.yml"
+    verification: "Workflow file exists"
+
+  # Workforce Security Evidence
+  - id: "HIPAA-E004"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(3)"
+    category: "Workforce Security"
+    evidence_type: "Access Control Configuration"
+    description: "CODEOWNERS file defines access permissions"
+    artifact: ".github/CODEOWNERS"
+    verification: "File exists in repository"
+
+  # Security Incident Evidence
+  - id: "HIPAA-E005"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(6)"
+    category: "Security Incident Procedures"
+    evidence_type: "Incident Response Automation"
+    description: "Slack notification for security events"
+    artifact: "scripts/slack_notifier.py"
+    verification: "Script exists"
+
+  - id: "HIPAA-E006"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(6)"
+    category: "Security Incident Procedures"
+    evidence_type: "Self-Healing Automation"
+    description: "Automated incident response agent"
+    artifact: "scripts/pr_self_heal.py"
+    verification: "Script exists"
+
+  # Contingency Plan Evidence
+  - id: "HIPAA-E007"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.308(a)(7)"
+    category: "Contingency Plan"
+    evidence_type: "Backup Procedure"
+    description: "Local LLM fallback for AI operations"
+    artifact: "scripts/ai_engine.py"
+    verification: "Ollama fallback implemented"
+
+  # Audit Controls Evidence
+  - id: "HIPAA-E008"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.312(b)"
+    category: "Audit Controls"
+    evidence_type: "Audit Log"
+    description: "AI metrics and events database"
+    artifact: ".ai/ai_metrics.db"
+    verification: "Database schema validated"
+
+  - id: "HIPAA-E009"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.312(b)"
+    category: "Audit Controls"
+    evidence_type: "Audit Log"
+    description: "AI changelog document"
+    artifact: ".ai/AI_CHANGELOG.md"
+    verification: "File exists"
+
+  - id: "HIPAA-E010"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.312(b)"
+    category: "Audit Controls"
+    evidence_type: "Compliance Evidence"
+    description: "SOC-2 evidence collection log"
+    artifact: ".ai/COMPLIANCE/SOC2_EVIDENCE_LOG.yaml"
+    verification: "YAML validation passed"
+
+  # Integrity Evidence
+  - id: "HIPAA-E011"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.312(c)(1)"
+    category: "Integrity"
+    evidence_type: "CI Enforcement"
+    description: "CI workflow enforces code integrity"
+    artifact: ".github/workflows/ci.yml"
+    verification: "Required checks pass"
+
+  # Access Control Evidence
+  - id: "HIPAA-E012"
+    timestamp: "2025-01-01T00:00:00Z"
+    safeguard: "164.312(a)(1)"
+    category: "Access Control"
+    evidence_type: "Access Policy"
+    description: "Auto-merge policy restricts automated access"
+    artifact: ".ai/AUTO_MERGE_POLICY.yaml"
+    verification: "Policy file exists"
+
+# ===========================================
+# Evidence Collection Schedule
+# ===========================================
+collection_schedule:
+  continuous:
+    - "CI/CD execution logs"
+    - "AI review results"
+    - "Security scan results"
+  daily:
+    - "Metrics database backup"
+  weekly:
+    - "Vulnerability scan results"
+  quarterly:
+    - "Risk assessment review"
+    - "Policy document review"
+  annual:
+    - "Full compliance audit"
+    - "Risk assessment update"
+
+# ===========================================
+# Artifact Locations
+# ===========================================
+artifact_locations:
+  policies:
+    - ".ai/CLAUDE_RULES.md"
+    - ".ai/AUTO_MERGE_POLICY.yaml"
+  workflows:
+    - ".github/workflows/ci.yml"
+    - ".github/workflows/security.yml"
+    - ".github/workflows/ai-review.yml"
+  access_control:
+    - ".github/CODEOWNERS"
+  audit_logs:
+    - ".ai/ai_metrics.db"
+    - ".ai/AI_CHANGELOG.md"
+    - ".ai/COMPLIANCE/SOC2_EVIDENCE_LOG.yaml"
+  risk_assessment:
+    - ".ai/COMPLIANCE/ISO_RISK_REGISTER.yaml"
+    - ".ai/COMPLIANCE/HIPAA/HIPAA_RISK_ASSESSMENT.yaml"

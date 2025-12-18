@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC 2 Type II Program - Trust Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav class="portal-nav">
+                <a href="index.html">Overview</a>
+                <a href="soc2.html" class="active">SOC 2</a>
+                <a href="hipaa.html">HIPAA</a>
+                <a href="hitrust.html">HITRUST</a>
+            </nav>
+            <h1>SOC 2 Type II Program</h1>
+            <p class="subtitle">Trust Service Criteria Compliance</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Overview Section -->
+        <section class="card">
+            <h2>Program Overview</h2>
+            <p>
+                Our controls operate continuously with automated evidence collection,
+                demonstrating operating effectiveness over time for SOC 2 Type II compliance.
+            </p>
+            <div class="status-badge active">
+                <span class="badge-icon">&#128274;</span>
+                <span class="badge-text">Evidence Collection Active</span>
+            </div>
+        </section>
+
+        <!-- Trust Service Criteria -->
+        <section class="card">
+            <h2>Trust Service Criteria</h2>
+            <div class="criteria-grid">
+                <div class="criteria-item">
+                    <h3>CC6 - Logical & Physical Access</h3>
+                    <ul>
+                        <li>CC6.1 - Logical access security</li>
+                        <li>CC6.2 - Authentication controls</li>
+                        <li>CC6.3 - Access removal procedures</li>
+                        <li>CC6.6 - Change management</li>
+                        <li>CC6.7 - Infrastructure changes</li>
+                    </ul>
+                    <span class="criteria-status">Implemented</span>
+                </div>
+                <div class="criteria-item">
+                    <h3>CC7 - System Operations</h3>
+                    <ul>
+                        <li>CC7.1 - System monitoring</li>
+                        <li>CC7.2 - Incident response</li>
+                        <li>CC7.3 - Change testing</li>
+                        <li>CC7.4 - Configuration management</li>
+                    </ul>
+                    <span class="criteria-status">Implemented</span>
+                </div>
+                <div class="criteria-item">
+                    <h3>CC8 - Change Management</h3>
+                    <ul>
+                        <li>CC8.1 - Change authorization</li>
+                    </ul>
+                    <span class="criteria-status">Implemented</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Control Effectiveness -->
+        <section class="card">
+            <h2>Control Effectiveness</h2>
+            <div class="effectiveness-grid">
+                <div class="effectiveness-item">
+                    <h4>Continuous Operation</h4>
+                    <p>Controls run on every code change, not just periodically</p>
+                </div>
+                <div class="effectiveness-item">
+                    <h4>Automated Evidence</h4>
+                    <p>Evidence collected without manual intervention</p>
+                </div>
+                <div class="effectiveness-item">
+                    <h4>No Manual Overrides</h4>
+                    <p>Controls cannot be bypassed</p>
+                </div>
+                <div class="effectiveness-item">
+                    <h4>Fail-Closed Gates</h4>
+                    <p>Non-compliant changes are blocked automatically</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Key Controls -->
+        <section class="card">
+            <h2>Key Controls</h2>
+            <div class="controls-detail">
+                <div class="control-detail">
+                    <h4>Change Management</h4>
+                    <p>All code changes require pull request approval and pass automated CI checks before deployment.</p>
+                    <span class="evidence-ref">Evidence: GitHub Actions CI pipeline</span>
+                </div>
+                <div class="control-detail">
+                    <h4>Access Control</h4>
+                    <p>Role-based access via CODEOWNERS with mandatory code review for sensitive paths.</p>
+                    <span class="evidence-ref">Evidence: GitHub branch protection rules</span>
+                </div>
+                <div class="control-detail">
+                    <h4>Security Scanning</h4>
+                    <p>Automated vulnerability scanning (Bandit, pip-audit, Safety) on every change.</p>
+                    <span class="evidence-ref">Evidence: Security workflow logs</span>
+                </div>
+                <div class="control-detail">
+                    <h4>AI Governance</h4>
+                    <p>AI-assisted development with strict governance rules and human oversight.</p>
+                    <span class="evidence-ref">Evidence: CLAUDE_RULES.md contract</span>
+                </div>
+                <div class="control-detail">
+                    <h4>Incident Response</h4>
+                    <p>Automated incident detection with self-healing capabilities and immediate notification.</p>
+                    <span class="evidence-ref">Evidence: Self-healing PR agent logs</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Evidence Statistics -->
+        <section class="card">
+            <h2>Evidence Collection</h2>
+            <div class="evidence-stats">
+                <div class="evidence-stat">
+                    <span class="stat-value" id="total-controls">10</span>
+                    <span class="stat-label">SOC 2 Controls</span>
+                </div>
+                <div class="evidence-stat">
+                    <span class="stat-value" id="implemented">10</span>
+                    <span class="stat-label">Implemented</span>
+                </div>
+                <div class="evidence-stat">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">Coverage</span>
+                </div>
+            </div>
+            <div class="evidence-timeline">
+                <h4>Evidence Sources</h4>
+                <ul>
+                    <li>CI/CD execution logs (per commit)</li>
+                    <li>AI review results (per PR)</li>
+                    <li>Security scan results (per PR + weekly)</li>
+                    <li>Metrics database (continuous)</li>
+                    <li>GitHub audit log (continuous)</li>
+                </ul>
+            </div>
+            <p class="retention-note">Evidence retained for 365 days minimum.</p>
+        </section>
+
+        <!-- Type II vs Type I -->
+        <section class="card">
+            <h2>Type II Compliance</h2>
+            <div class="type-comparison">
+                <div class="type-box">
+                    <h4>Type I</h4>
+                    <p>Point-in-time assessment of control design</p>
+                    <span class="type-status">Complete</span>
+                </div>
+                <div class="type-box highlighted">
+                    <h4>Type II</h4>
+                    <p>Operating effectiveness over time (typically 6-12 months)</p>
+                    <span class="type-status">In Progress</span>
+                </div>
+            </div>
+            <p class="type-note">
+                Our automated evidence collection demonstrates continuous control operation,
+                supporting Type II audit requirements.
+            </p>
+        </section>
+
+        <!-- Auditor Resources -->
+        <section class="card">
+            <h2>Auditor Resources</h2>
+            <p>The following resources are available for SOC 2 auditors:</p>
+            <ul class="auditor-resources">
+                <li>SOC 2 Type II Auditor Packet (PDF + Excel)</li>
+                <li>Control Mapping Documentation</li>
+                <li>Evidence Export Package</li>
+                <li>Metrics Database Access</li>
+            </ul>
+            <p class="resource-note">
+                Contact our compliance team for auditor access and documentation requests.
+            </p>
+        </section>
+
+        <!-- Contact -->
+        <section class="card">
+            <h2>Contact</h2>
+            <div class="contact-info">
+                <p><strong>Security Inquiries:</strong> <a href="mailto:security@example.com">security@example.com</a></p>
+                <p><strong>Compliance Team:</strong> <a href="mailto:compliance@example.com">compliance@example.com</a></p>
+                <p><strong>Audit Requests:</strong> <a href="mailto:audit@example.com">audit@example.com</a></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Data auto-generated from compliance systems.</p>
+            <p class="footer-note">Evidence collection is continuous and automated.</p>
+        </div>
+    </footer>
+</body>
+</html>

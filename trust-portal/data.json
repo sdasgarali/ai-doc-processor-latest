@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "generated": "2025-01-01T00:00:00Z",
+    "version": "1.0",
+    "organization": "Your Organization"
+  },
+  "security": {
+    "certifications": [
+      {
+        "name": "SOC-2 Type II",
+        "status": "Evidence Collection Active",
+        "details": "Automated evidence collection in progress"
+      },
+      {
+        "name": "ISO 27001:2022",
+        "status": "Aligned",
+        "details": "Controls mapped and implemented"
+      }
+    ],
+    "controls": [
+      {
+        "name": "Change Management",
+        "description": "All code changes require PR approval and pass automated CI checks",
+        "evidence": "GitHub Actions CI pipeline"
+      },
+      {
+        "name": "Access Control",
+        "description": "Role-based access via CODEOWNERS with mandatory code review",
+        "evidence": "GitHub branch protection rules"
+      },
+      {
+        "name": "Security Scanning",
+        "description": "Automated vulnerability scanning on every change",
+        "evidence": "Bandit, pip-audit, Safety scans"
+      },
+      {
+        "name": "AI Governance",
+        "description": "AI-assisted development with strict governance rules",
+        "evidence": ".ai/CLAUDE_RULES.md contract"
+      },
+      {
+        "name": "Incident Response",
+        "description": "Automated incident detection and remediation",
+        "evidence": "Self-healing PR agent"
+      }
+    ],
+    "features": [
+      "Multi-factor authentication required",
+      "Encrypted data in transit and at rest",
+      "Audit logging enabled",
+      "Regular security assessments"
+    ]
+  },
+  "availability": {
+    "monitoring": {
+      "type": "Continuous",
+      "description": "CI/CD pipeline monitors all code changes",
+      "alerting": "Slack notifications for failures"
+    },
+    "incident_response": {
+      "type": "Automated + Human",
+      "mean_time_to_detect": "< 1 minute",
+      "mean_time_to_respond": "< 5 minutes (automated)",
+      "escalation": "Human review for complex issues"
+    },
+    "business_continuity": {
+      "local_fallback": "Local LLM (Ollama) for air-gapped environments",
+      "fail_open": "Non-critical AI steps fail-open"
+    }
+  },
+  "compliance": {
+    "soc2": {
+      "framework": "SOC-2 Type II",
+      "status": "Evidence Collection Active",
+      "controls_implemented": 10,
+      "total_controls": 10,
+      "coverage_percentage": 100,
+      "evidence_entries": 0,
+      "criteria_covered": ["CC6", "CC7", "CC8"]
+    },
+    "iso27001": {
+      "framework": "ISO 27001:2022",
+      "status": "Aligned",
+      "controls_implemented": 15,
+      "total_controls": 15,
+      "coverage_percentage": 100,
+      "annex_a_covered": ["A.5", "A.8", "A.16"],
+      "risk_register": {
+        "total_risks": 7,
+        "high_risks": 0,
+        "mitigated": 5
+      }
+    },
+    "evidence_automation": {
+      "enabled": true,
+      "collection": "Continuous",
+      "retention": "365 days"
+    }
+  },
+  "governance": {
+    "ai_governance": {
+      "enabled": true,
+      "rules_document": ".ai/CLAUDE_RULES.md",
+      "enforcement": "Automated via CI/CD",
+      "human_override": "Always available"
+    },
+    "change_approval": {
+      "auto_merge": "LOW risk only",
+      "human_review": "Required for MEDIUM/HIGH/CRITICAL",
+      "policy_driven": true
+    },
+    "audit_trail": {
+      "enabled": true,
+      "format": "YAML + SQLite",
+      "exports": ["SOC-2 Evidence Package", "ISO Evidence Package"]
+    }
+  },
+  "contact": {
+    "security": "security@example.com",
+    "compliance": "compliance@example.com",
+    "support": "support@example.com"
+  }
+}

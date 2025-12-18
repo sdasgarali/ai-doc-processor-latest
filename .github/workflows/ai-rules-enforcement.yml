@@ -1,0 +1,40 @@
+name: AI Rules Enforcement
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  enforce-ai-rules:
+    name: "📜 Enforce AI Rules"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate AI Rules File Exists
+        run: |
+          if [ ! -f ".ai/CLAUDE_RULES.md" ]; then
+            echo "❌ .ai/CLAUDE_RULES.md is missing"
+            exit 1
+          fi
+
+      - name: Validate AI Rules Content
+        run: |
+          REQUIRED=(
+            "CI/CD"
+            "AI provider"
+            "Security"
+            "Coverage"
+            "Fail-open"
+            "Fail-closed"
+          )
+
+          for item in "${REQUIRED[@]}"; do
+            if ! grep -qi "$item" .ai/CLAUDE_RULES.md; then
+              echo "❌ Missing required rule: $item"
+              exit 1
+            fi
+          done
+
+          echo "✅ AI rules validated"

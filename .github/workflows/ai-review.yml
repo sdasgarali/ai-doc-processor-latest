@@ -1,0 +1,152 @@
+# .github/workflows/ai-review.yml
+# AI-Powered Code Review - Fail-open (non-blocking)
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ============================================
+  # AI CODE REVIEW (FAIL-OPEN)
+  # ============================================
+  ai-review:
+    name: "🤖 AI Code Review"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true  # FAIL-OPEN: AI failures don't block merge
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: AI Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this pull request comprehensively:
+            1. Check for potential bugs, security issues, and performance problems
+            2. Verify code follows best practices and project conventions
+            3. Suggest improvements for readability and maintainability
+            4. Flag any breaking changes or API modifications
+            5. Ensure proper error handling and edge cases
+
+            Provide actionable feedback with specific line references.
+          claude_args: "--max-turns 10"
+
+  # ============================================
+  # AI RULES SEMANTIC AUDIT (FAIL-CLOSED on violation)
+  # ============================================
+  ai-rules-audit:
+    name: "📜 AI Rules Audit"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install httpx
+
+      - name: AI Rules Audit
+        env:
+          AI_PROVIDER: groq
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/ai_rules_audit.py
+
+  # ============================================
+  # AI SECURITY REVIEW (FAIL-OPEN)
+  # ============================================
+  ai-security:
+    name: "🛡️ AI Security Audit"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true  # FAIL-OPEN
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AI Security Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Perform a security audit on this codebase:
+            1. Check for SQL injection, XSS, CSRF vulnerabilities
+            2. Review authentication and authorization logic
+            3. Identify hardcoded secrets or sensitive data
+            4. Check for insecure dependencies
+            5. Review input validation and sanitization
+
+            Report findings with severity levels and remediation steps.
+          claude_args: "--max-turns 8"
+
+  # ============================================
+  # AI TEST GENERATION (FAIL-OPEN)
+  # ============================================
+  ai-test-gen:
+    name: "🧪 AI Test Suggestions"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true  # FAIL-OPEN
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Changed Files
+        id: changed
+        run: |
+          echo "files=$(git diff --name-only origin/main...HEAD | grep -E '\.(py|js|ts)$' | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: AI Test Generation
+        if: steps.changed.outputs.files != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Analyze changed files and suggest tests:
+            Files: ${{ steps.changed.outputs.files }}
+
+            For each file:
+            1. Identify untested code paths
+            2. Suggest unit tests for new/modified functions
+            3. Include edge cases and error conditions
+            4. Follow existing test patterns
+
+            Output test suggestions as comments, not file changes.
+          claude_args: "--max-turns 10"
+
+  # ============================================
+  # ON-DEMAND CLAUDE COMMANDS (FAIL-OPEN)
+  # ============================================
+  claude-command:
+    name: "💬 Claude On-Demand"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '@claude')
+    continue-on-error: true  # FAIL-OPEN
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Process Claude Command
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--max-turns 10"

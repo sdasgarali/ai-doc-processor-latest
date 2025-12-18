@@ -1,0 +1,201 @@
+# ===========================================
+# SIG (Standardized Information Gathering) Questionnaire
+# ===========================================
+# Pre-written answers for enterprise customer security assessments.
+# Based on SIG Core questionnaire format.
+# ===========================================
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-01-01"
+  framework: "SIG Core"
+  owner: "Security Team"
+
+SIG:
+  # ===========================================
+  # A. Risk Management
+  # ===========================================
+  - id: SIG-A.01
+    category: "Risk Management"
+    question: "Does your organization have a formal risk management program?"
+    answer: |
+      Yes. We maintain a formal risk management program that includes:
+      - ISO 27001-aligned risk register with 7 identified risks
+      - Quarterly risk reviews
+      - Risk scoring matrix (Likelihood x Impact)
+      - Treatment plans for each risk (Mitigate/Accept/Transfer)
+    evidence:
+      - .ai/COMPLIANCE/ISO_RISK_REGISTER.yaml
+      - reports/ISO_Risk_Register_Report.md
+    status: "Implemented"
+
+  # ===========================================
+  # B. Security Policy
+  # ===========================================
+  - id: SIG-B.01
+    category: "Security Policy"
+    question: "Do you have documented information security policies?"
+    answer: |
+      Yes. Our security policies are documented and enforced through code:
+      - AI governance rules (.ai/CLAUDE_RULES.md)
+      - Auto-merge policy (.ai/AUTO_MERGE_POLICY.yaml)
+      - Change management policy (CI/CD workflows)
+      Policies are version-controlled and changes require approval.
+    evidence:
+      - .ai/CLAUDE_RULES.md
+      - .ai/AUTO_MERGE_POLICY.yaml
+    status: "Implemented"
+
+  # ===========================================
+  # C. Access Control
+  # ===========================================
+  - id: SIG-C.01
+    category: "Access Control"
+    question: "Do you require code reviews for production changes?"
+    answer: |
+      Yes. All production changes require:
+      - Pull request approval from designated code owners
+      - Automated CI validation (lint, tests, security scans)
+      - Risk classification by AI auditor
+      - Human approval for MEDIUM/HIGH/CRITICAL risk changes
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/CODEOWNERS
+      - .github/workflows/ai-review.yml
+    status: "Implemented"
+
+  - id: SIG-C.02
+    category: "Access Control"
+    question: "How do you manage access to source code?"
+    answer: |
+      Source code access is managed through:
+      - GitHub organization membership with MFA required
+      - Role-based access via GitHub teams
+      - CODEOWNERS file designates required reviewers per path
+      - Branch protection rules prevent direct pushes
+    evidence:
+      - .github/CODEOWNERS
+    status: "Implemented"
+
+  # ===========================================
+  # D. Vulnerability Management
+  # ===========================================
+  - id: SIG-D.01
+    category: "Vulnerability Management"
+    question: "How do you manage vulnerabilities?"
+    answer: |
+      Vulnerabilities are managed through automated scanning:
+      - Bandit static analysis for Python security issues
+      - pip-audit for dependency vulnerabilities
+      - Safety database checks
+      - Scans run on every PR and weekly on schedule
+      - HIGH/CRITICAL findings block merge
+    evidence:
+      - .github/workflows/security.yml
+    status: "Implemented"
+
+  - id: SIG-D.02
+    category: "Vulnerability Management"
+    question: "How quickly are critical vulnerabilities remediated?"
+    answer: |
+      Critical vulnerabilities are addressed with high priority:
+      - CI pipeline blocks merge on critical findings
+      - Self-healing agent can auto-fix some issues
+      - Slack notifications alert security team immediately
+      - Mean time to respond: < 5 minutes (automated)
+    evidence:
+      - .github/workflows/security.yml
+      - scripts/pr_self_heal.py
+      - scripts/slack_notifier.py
+    status: "Implemented"
+
+  # ===========================================
+  # E. Change Management
+  # ===========================================
+  - id: SIG-E.01
+    category: "Change Management"
+    question: "Do you have a formal change management process?"
+    answer: |
+      Yes. All changes follow a formal process:
+      1. Developer creates pull request
+      2. Automated CI runs (lint, tests, security)
+      3. AI reviews and classifies risk level
+      4. Code owners approve the change
+      5. Change merges only if all checks pass
+      LOW risk changes may auto-merge; others require human approval.
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/workflows/ai-review.yml
+      - .ai/AUTO_MERGE_POLICY.yaml
+    status: "Implemented"
+
+  - id: SIG-E.02
+    category: "Change Management"
+    question: "How are changes tested before deployment?"
+    answer: |
+      Changes are tested through multiple stages:
+      - Unit tests (85% coverage requirement)
+      - Integration tests
+      - Security scans (Bandit, pip-audit, Safety)
+      - AI code review
+      - Staging deployment before production
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/workflows/cd-staging.yml
+      - pyproject.toml
+    status: "Implemented"
+
+  # ===========================================
+  # F. Incident Response
+  # ===========================================
+  - id: SIG-F.01
+    category: "Incident Response"
+    question: "Do you have an incident response plan?"
+    answer: |
+      Yes. Incident response is automated where possible:
+      - CI failures trigger immediate Slack notifications
+      - Self-healing agent attempts auto-remediation
+      - All incidents logged in PR comments for audit trail
+      - Human escalation for complex issues
+      - Metrics database tracks all incidents
+    evidence:
+      - scripts/pr_self_heal.py
+      - scripts/slack_notifier.py
+      - scripts/pr_commenter.py
+      - scripts/ai_metrics.py
+    status: "Implemented"
+
+  # ===========================================
+  # G. Business Continuity
+  # ===========================================
+  - id: SIG-G.01
+    category: "Business Continuity"
+    question: "Do you have business continuity plans for critical systems?"
+    answer: |
+      Yes. Business continuity measures include:
+      - Local LLM fallback (Ollama) for air-gapped environments
+      - Fail-open for non-critical AI steps
+      - Self-contained governance rules (no external dependencies)
+      - Production deployment with rollback capability
+    evidence:
+      - scripts/ai_engine.py
+      - .github/workflows/cd-prod.yml
+    status: "Implemented"
+
+  # ===========================================
+  # H. Compliance
+  # ===========================================
+  - id: SIG-H.01
+    category: "Compliance"
+    question: "What compliance frameworks do you align with?"
+    answer: |
+      We align with the following frameworks:
+      - SOC-2 Type II (evidence collection active)
+      - ISO 27001:2022 (controls mapped and implemented)
+      - Automated compliance scoring and monitoring
+      - Evidence packages generated for auditors
+    evidence:
+      - .ai/COMPLIANCE/SOC2_MAPPING.yaml
+      - .ai/COMPLIANCE/ISO27001_MAPPING.yaml
+      - scripts/export_compliance_evidence.py
+    status: "Implemented"

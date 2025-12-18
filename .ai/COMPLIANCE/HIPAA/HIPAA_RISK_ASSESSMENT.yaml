@@ -1,0 +1,254 @@
+# ===========================================
+# HIPAA Security Risk Assessment
+# ===========================================
+# Risk assessment for CI/CD and AI governance systems
+# that may interact with systems processing ePHI.
+# Reference: 45 CFR 164.308(a)(1)(ii)(A)
+# ===========================================
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-01-01"
+  assessment_date: "2025-01-01"
+  next_review: "2025-04-01"
+  assessor: "Compliance Team"
+  scope: "CI/CD pipelines and AI-assisted development"
+
+# ===========================================
+# Risk Assessment Summary
+# ===========================================
+summary:
+  total_risks: 8
+  high_risks: 0
+  medium_risks: 2
+  low_risks: 6
+  mitigated: 7
+  accepted: 1
+
+# ===========================================
+# Risk Register
+# ===========================================
+risk_assessment:
+  # Risk 1: Unauthorized Code Changes
+  - id: "HIPAA-R1"
+    title: "Unauthorized code changes impacting ePHI systems"
+    category: "Access Control"
+    threat: "Unauthorized developer pushes malicious code"
+    vulnerability: "Insufficient access controls"
+    asset: "Source code repository"
+    likelihood: "Low"
+    impact: "High"
+    risk_score: 6
+    risk_level: "Medium"
+    hipaa_reference:
+      - "164.312(a)(1)"
+      - "164.312(c)(1)"
+    mitigation:
+      - "Mandatory PR reviews via CODEOWNERS"
+      - "CI enforcement blocks non-compliant changes"
+      - "AI governance rules audit all changes"
+      - "Branch protection prevents direct pushes"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Security Team"
+    review_date: "2025-01-01"
+
+  # Risk 2: Incorrect Automated Changes
+  - id: "HIPAA-R2"
+    title: "Incorrect automated changes by AI"
+    category: "Change Management"
+    threat: "AI introduces bugs or security flaws"
+    vulnerability: "Over-reliance on automation"
+    asset: "Production code"
+    likelihood: "Medium"
+    impact: "Medium"
+    risk_score: 9
+    risk_level: "Medium"
+    hipaa_reference:
+      - "164.308(a)(1)"
+      - "164.312(c)(1)"
+    mitigation:
+      - "Risk-based auto-merge (LOW risk only)"
+      - "Human approval required for MEDIUM/HIGH/CRITICAL"
+      - "All changes pass CI tests and security scans"
+      - "AI confidence threshold (0.85) for auto-merge"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Development Team"
+    review_date: "2025-01-01"
+
+  # Risk 3: Audit Log Tampering
+  - id: "HIPAA-R3"
+    title: "Audit log tampering or deletion"
+    category: "Audit Controls"
+    threat: "Attacker modifies logs to hide activity"
+    vulnerability: "Logs stored in accessible location"
+    asset: "Audit logs and metrics database"
+    likelihood: "Low"
+    impact: "High"
+    risk_score: 6
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.312(b)"
+    mitigation:
+      - "Git history is immutable"
+      - "PR comments are append-only"
+      - "SQLite database protected by file permissions"
+      - "GitHub audit log is external and immutable"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Security Team"
+    review_date: "2025-01-01"
+
+  # Risk 4: Secret Exposure
+  - id: "HIPAA-R4"
+    title: "Accidental exposure of secrets or credentials"
+    category: "Data Protection"
+    threat: "Credentials committed to repository"
+    vulnerability: "Human error in code commits"
+    asset: "API keys, tokens, credentials"
+    likelihood: "Low"
+    impact: "High"
+    risk_score: 6
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.312(a)(1)"
+      - "164.312(e)(1)"
+    mitigation:
+      - "Pre-commit hooks detect secrets"
+      - "Security scanning (Bandit) detects hardcoded secrets"
+      - ".gitignore excludes sensitive files"
+      - "GitHub Secrets for CI/CD credentials"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Development Team"
+    review_date: "2025-01-01"
+
+  # Risk 5: CI/CD Pipeline Compromise
+  - id: "HIPAA-R5"
+    title: "CI/CD pipeline compromise"
+    category: "Infrastructure"
+    threat: "Attacker compromises CI/CD infrastructure"
+    vulnerability: "Third-party service dependency"
+    asset: "GitHub Actions runners"
+    likelihood: "Low"
+    impact: "High"
+    risk_score: 6
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.308(a)(1)"
+    mitigation:
+      - "Ephemeral CI runners (no persistent state)"
+      - "Scoped API tokens with minimal permissions"
+      - "Workflow file changes require approval"
+      - "Dependency pinning and hash verification"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "DevOps Team"
+    review_date: "2025-01-01"
+
+  # Risk 6: AI Service Unavailability
+  - id: "HIPAA-R6"
+    title: "AI service unavailability disrupts operations"
+    category: "Business Continuity"
+    threat: "AI provider outage"
+    vulnerability: "Single AI provider dependency"
+    asset: "AI code review service"
+    likelihood: "Medium"
+    impact: "Low"
+    risk_score: 4
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.308(a)(7)"
+    mitigation:
+      - "Local LLM fallback (Ollama)"
+      - "Fail-open for non-critical AI steps"
+      - "Human review always available"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Development Team"
+    review_date: "2025-01-01"
+
+  # Risk 7: Insufficient Security Training
+  - id: "HIPAA-R7"
+    title: "Developers lack security awareness"
+    category: "Training"
+    threat: "Developers introduce vulnerabilities"
+    vulnerability: "Insufficient security knowledge"
+    asset: "Development team"
+    likelihood: "Medium"
+    impact: "Medium"
+    risk_score: 9
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.308(a)(5)"
+    mitigation:
+      - "AI review provides security feedback on PRs"
+      - "Security scan results educate developers"
+      - "CLAUDE_RULES.md serves as policy reference"
+      - "Automated blocking of insecure patterns"
+    residual_risk: "Low"
+    status: "Mitigated"
+    owner: "Compliance Team"
+    review_date: "2025-01-01"
+
+  # Risk 8: Third-Party Dependency Vulnerabilities
+  - id: "HIPAA-R8"
+    title: "Vulnerable third-party dependencies"
+    category: "Vulnerability Management"
+    threat: "Attacker exploits known vulnerabilities"
+    vulnerability: "Outdated or vulnerable dependencies"
+    asset: "Python packages"
+    likelihood: "Medium"
+    impact: "Medium"
+    risk_score: 9
+    risk_level: "Low"
+    hipaa_reference:
+      - "164.308(a)(1)"
+    mitigation:
+      - "pip-audit scans on every PR"
+      - "Safety database checks"
+      - "HIGH/CRITICAL findings block merge"
+      - "Weekly scheduled vulnerability scans"
+    residual_risk: "Low"
+    status: "Accepted"
+    status_reason: "Residual risk accepted due to automated scanning"
+    owner: "Security Team"
+    review_date: "2025-01-01"
+
+# ===========================================
+# Risk Matrix
+# ===========================================
+risk_matrix:
+  likelihood_scale:
+    - level: "Low"
+      description: "Unlikely to occur (< 10% chance per year)"
+      score: 1
+    - level: "Medium"
+      description: "May occur (10-50% chance per year)"
+      score: 2
+    - level: "High"
+      description: "Likely to occur (> 50% chance per year)"
+      score: 3
+
+  impact_scale:
+    - level: "Low"
+      description: "Minor impact, easily recoverable"
+      score: 1
+    - level: "Medium"
+      description: "Moderate impact, requires effort to recover"
+      score: 2
+    - level: "High"
+      description: "Significant impact, difficult to recover"
+      score: 3
+
+  risk_levels:
+    - range: "1-3"
+      level: "Low"
+      action: "Monitor"
+    - range: "4-6"
+      level: "Medium"
+      action: "Mitigate"
+    - range: "7-9"
+      level: "High"
+      action: "Immediate action required"

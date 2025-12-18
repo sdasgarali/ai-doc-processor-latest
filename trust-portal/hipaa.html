@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIPAA Security Program - Trust Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav class="portal-nav">
+                <a href="index.html">Overview</a>
+                <a href="soc2.html">SOC 2</a>
+                <a href="hipaa.html" class="active">HIPAA</a>
+                <a href="hitrust.html">HITRUST</a>
+            </nav>
+            <h1>HIPAA Security Program</h1>
+            <p class="subtitle">Healthcare-Grade Security for Software Development</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Overview Section -->
+        <section class="card">
+            <h2>Program Overview</h2>
+            <p>
+                We maintain comprehensive safeguards aligned with the HIPAA Security Rule
+                (45 CFR Part 164, Subpart C) for our software development and deployment
+                infrastructure that may interact with systems processing electronic
+                Protected Health Information (ePHI).
+            </p>
+            <div class="status-badge compliant">
+                <span class="badge-icon">&#9989;</span>
+                <span class="badge-text">Security Rule Aligned</span>
+            </div>
+        </section>
+
+        <!-- Administrative Safeguards -->
+        <section class="card">
+            <h2>Administrative Safeguards (164.308)</h2>
+            <div class="safeguard-list">
+                <div class="safeguard-item">
+                    <h4>Security Management Process</h4>
+                    <p>Formal risk assessment program with documented risk register and automated security enforcement through CI/CD controls.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Workforce Security</h4>
+                    <p>Role-based access control via GitHub organization membership with multi-factor authentication required.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Information Access Management</h4>
+                    <p>Least-privilege access principles with CODEOWNERS enforcement and branch protection rules.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Security Incident Procedures</h4>
+                    <p>Automated incident detection, immediate alerting, and documented response procedures.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Contingency Plan</h4>
+                    <p>Local fallback systems, production rollback capabilities, and business continuity measures.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Safeguards -->
+        <section class="card">
+            <h2>Technical Safeguards (164.312)</h2>
+            <div class="safeguard-list">
+                <div class="safeguard-item">
+                    <h4>Access Control</h4>
+                    <p>Strong authentication via GitHub SSO/MFA, protected branches, and scoped API tokens.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Audit Controls</h4>
+                    <p>Comprehensive logging of all system activities with immutable audit trail through Git history.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Integrity Controls</h4>
+                    <p>Mandatory code review, automated testing, and CI/CD enforcement for all changes.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+                <div class="safeguard-item">
+                    <h4>Transmission Security</h4>
+                    <p>HTTPS required for all communications with TLS 1.2+ enforced.</p>
+                    <span class="status-tag implemented">Implemented</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Physical Safeguards -->
+        <section class="card">
+            <h2>Physical Safeguards (164.310)</h2>
+            <p>
+                Physical security controls are maintained by our cloud infrastructure provider(s),
+                which hold SOC-2 Type II certifications and implement appropriate physical security measures.
+            </p>
+            <div class="provider-note">
+                <span class="note-icon">&#128274;</span>
+                <span>Cloud provider security documentation available upon request.</span>
+            </div>
+        </section>
+
+        <!-- Risk Assessment -->
+        <section class="card">
+            <h2>Risk Assessment</h2>
+            <p>
+                We conduct formal risk assessments in accordance with 164.308(a)(1)(ii)(A),
+                identifying and mitigating risks to ePHI-related systems.
+            </p>
+            <div class="risk-summary">
+                <div class="risk-stat">
+                    <span class="risk-value">8</span>
+                    <span class="risk-label">Risks Assessed</span>
+                </div>
+                <div class="risk-stat">
+                    <span class="risk-value">0</span>
+                    <span class="risk-label">High Risks</span>
+                </div>
+                <div class="risk-stat">
+                    <span class="risk-value">7</span>
+                    <span class="risk-label">Mitigated</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Governance -->
+        <section class="card">
+            <h2>AI-Assisted Development Controls</h2>
+            <p>
+                Our development process incorporates AI-assisted tools with safeguards
+                to ensure security and compliance:
+            </p>
+            <ul class="ai-controls">
+                <li><strong>Governance Framework:</strong> Documented AI usage policies and constraints</li>
+                <li><strong>Human Oversight:</strong> Human approval required for significant changes</li>
+                <li><strong>Risk Classification:</strong> Automated risk assessment of all changes</li>
+                <li><strong>Audit Trail:</strong> All AI-assisted decisions logged and auditable</li>
+                <li><strong>Fail-Safe Controls:</strong> Non-compliant changes blocked automatically</li>
+            </ul>
+        </section>
+
+        <!-- Documentation -->
+        <section class="card">
+            <h2>Documentation</h2>
+            <p>The following documentation is available to customers and auditors:</p>
+            <ul class="doc-list">
+                <li>HIPAA Security Assurance Letter</li>
+                <li>Safeguards Mapping Documentation</li>
+                <li>Risk Assessment Summary</li>
+                <li>Evidence Collection Procedures</li>
+            </ul>
+            <p class="doc-note">
+                Contact our compliance team for documentation requests or
+                Business Associate Agreement (BAA) discussions.
+            </p>
+        </section>
+
+        <!-- Contact -->
+        <section class="card">
+            <h2>Contact</h2>
+            <div class="contact-info">
+                <p><strong>Security Inquiries:</strong> <a href="mailto:security@example.com">security@example.com</a></p>
+                <p><strong>Compliance Team:</strong> <a href="mailto:compliance@example.com">compliance@example.com</a></p>
+                <p><strong>BAA Requests:</strong> <a href="mailto:legal@example.com">legal@example.com</a></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Data auto-generated from compliance systems.</p>
+            <p class="footer-note">This information is provided for customer assurance purposes only.</p>
+        </div>
+    </footer>
+</body>
+</html>

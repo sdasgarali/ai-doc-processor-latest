@@ -1,0 +1,38 @@
+# ===========================================
+# Org-Wide Governance Configuration
+# ===========================================
+# List all repositories that must comply with AI governance.
+# The controller validates each repo has required files.
+# ===========================================
+
+org: your-github-org
+
+# Repositories under governance
+repositories:
+  - autonomous-cicd-template
+  # Add more repos here:
+  # - billing-service
+  # - claims-pipeline
+  # - api-gateway
+
+# Required files that MUST exist in each repo
+required_files:
+  - .ai/CLAUDE_RULES.md
+  - .github/workflows/ci.yml
+  - .github/workflows/ai-rules-enforcement.yml
+
+# Required content patterns (regex) in CLAUDE_RULES.md
+required_concepts:
+  - "fail-closed"
+  - "coverage.*85"
+  - "AI.*provider"
+
+# Notification settings
+notifications:
+  slack_webhook_env: SLACK_WEBHOOK_URL
+  email_on_drift: false
+
+# Schedule (cron format)
+schedule:
+  # Run nightly at 2 AM UTC
+  cron: "0 2 * * *"

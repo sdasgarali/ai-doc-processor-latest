@@ -1,0 +1,246 @@
+# ===========================================
+# Audit Questionnaire - Control Evidence
+# ===========================================
+# Pre-written answers to common audit questions.
+# Generates consistent, evidence-backed responses.
+# ===========================================
+
+version: "1.0"
+last_updated: "2024-01-01"
+owner: "Security Team"
+
+questions:
+  # ===========================================
+  # Access Control Questions
+  # ===========================================
+  - id: SOC2_CC6_1
+    framework: SOC2
+    control: CC6.1
+    question: "How do you ensure only authorized changes reach production?"
+    answer:
+      - All code changes require a pull request (PR)
+      - PRs must pass automated CI checks (lint, tests, security scans)
+      - PRs require approval from designated code owners (CODEOWNERS)
+      - Branch protection rules prevent direct pushes to main
+      - AI governance rules are enforced via automated workflow
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/CODEOWNERS
+      - .ai/CLAUDE_RULES.md
+    automated: true
+
+  - id: SOC2_CC6_2
+    framework: SOC2
+    control: CC6.2
+    question: "How is access to the codebase authenticated and authorized?"
+    answer:
+      - GitHub organization membership required for access
+      - Multi-factor authentication (MFA) enforced org-wide
+      - Role-based access via GitHub teams
+      - CODEOWNERS file designates required reviewers per path
+      - Repository access logged via GitHub audit logs
+    evidence:
+      - .github/CODEOWNERS
+      - GitHub organization settings
+    automated: true
+
+  - id: SOC2_CC6_6
+    framework: SOC2
+    control: CC6.6
+    question: "How are changes tested and approved before deployment?"
+    answer:
+      - Automated tests run on every PR (unit, integration)
+      - Code coverage must meet 85% threshold
+      - Security scanning via Bandit and pip-audit
+      - AI code review provides additional analysis
+      - Risk classification determines approval requirements
+      - LOW risk changes may auto-merge; others require human review
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/workflows/ai-review.yml
+      - .ai/AUTO_MERGE_POLICY.yaml
+      - pyproject.toml
+    automated: true
+
+  # ===========================================
+  # Monitoring and Detection Questions
+  # ===========================================
+  - id: SOC2_CC7_1
+    framework: SOC2
+    control: CC7.1
+    question: "How do you monitor systems for security events?"
+    answer:
+      - CI pipeline monitors all code changes
+      - Security workflows scan for vulnerabilities on every PR
+      - Weekly scheduled security scans for drift detection
+      - Slack notifications alert on failures
+      - AI metrics database tracks all automated actions
+    evidence:
+      - .github/workflows/security.yml
+      - scripts/slack_notifier.py
+      - scripts/ai_metrics.py
+    automated: true
+
+  - id: SOC2_CC7_2
+    framework: SOC2
+    control: CC7.2
+    question: "How are incidents detected and responded to?"
+    answer:
+      - CI failures trigger immediate notifications
+      - Self-healing PR agent automatically fixes common issues
+      - Maximum 2 auto-fix attempts prevent infinite loops
+      - PR comments document all automated actions
+      - Human intervention required for complex failures
+    evidence:
+      - scripts/pr_self_heal.py
+      - scripts/pr_commenter.py
+      - .github/workflows/self-heal.yml
+    automated: true
+
+  # ===========================================
+  # Vulnerability Management Questions
+  # ===========================================
+  - id: ISO_A8_8
+    framework: ISO27001
+    control: A.8.8
+    question: "How are vulnerabilities identified and addressed?"
+    answer:
+      - Automated security scans run on every pull request
+      - Bandit scans Python code for security issues
+      - pip-audit checks dependencies for known vulnerabilities
+      - Safety checks against vulnerability databases
+      - Weekly scheduled scans detect new vulnerabilities
+      - CI fails on HIGH/CRITICAL severity findings
+    evidence:
+      - .github/workflows/security.yml
+    automated: true
+
+  - id: ISO_A8_9
+    framework: ISO27001
+    control: A.8.9
+    question: "How is configuration managed and controlled?"
+    answer:
+      - All configuration is version-controlled in the repository
+      - Changes to configuration require PR approval
+      - CI pipelines are defined as code (GitHub Actions YAML)
+      - Pre-commit hooks enforce configuration standards
+      - Governance controller monitors configuration drift
+    evidence:
+      - .github/workflows/
+      - pyproject.toml
+      - .pre-commit-config.yaml
+      - governance-controller/controller.py
+    automated: true
+
+  # ===========================================
+  # Change Management Questions
+  # ===========================================
+  - id: ISO_A8_32
+    framework: ISO27001
+    control: A.8.32
+    question: "How are changes documented and tracked?"
+    answer:
+      - All changes documented via Git commit history
+      - PR descriptions and comments provide context
+      - AI actions logged in AI_CHANGELOG.md
+      - Risk level labels applied to every PR
+      - Metrics database captures all automated events
+    evidence:
+      - .ai/AI_CHANGELOG.md
+      - scripts/ai_metrics.py
+      - Git commit history
+    automated: true
+
+  - id: ISO_A8_25
+    framework: ISO27001
+    control: A.8.25
+    question: "How is security integrated into the development lifecycle?"
+    answer:
+      - Pre-commit hooks run security checks locally
+      - CI pipeline includes lint, test, and security stages
+      - AI code review analyzes security implications
+      - Security scanning runs on every PR
+      - Production deployments require all checks to pass
+    evidence:
+      - .pre-commit-config.yaml
+      - .github/workflows/ci.yml
+      - .github/workflows/security.yml
+      - .github/workflows/ai-review.yml
+    automated: true
+
+  # ===========================================
+  # Incident Management Questions
+  # ===========================================
+  - id: ISO_A16_1
+    framework: ISO27001
+    control: A.16.1
+    question: "How are security incidents managed?"
+    answer:
+      - CI failures trigger automated notifications to Slack
+      - Self-healing agent attempts automatic remediation
+      - All actions documented in PR comments
+      - Metrics database provides audit trail
+      - Human escalation for unresolved issues
+    evidence:
+      - scripts/slack_notifier.py
+      - scripts/pr_self_heal.py
+      - scripts/pr_commenter.py
+      - scripts/ai_metrics.py
+    automated: true
+
+  # ===========================================
+  # AI Governance Questions
+  # ===========================================
+  - id: AI_GOV_1
+    framework: Custom
+    control: AI-1
+    question: "How is AI usage governed in the development process?"
+    answer:
+      - Mandatory AI rules defined in .ai/CLAUDE_RULES.md
+      - All AI sessions must follow governance contract
+      - AI cannot weaken CI/CD gates or security controls
+      - AI provider abstraction ensures vendor neutrality
+      - Automatic fallback to local LLM for air-gapped environments
+      - All AI actions logged for audit trail
+    evidence:
+      - .ai/CLAUDE_RULES.md
+      - .ai/BOOTSTRAP_PROMPT.md
+      - scripts/ai_engine.py
+      - scripts/ai_metrics.py
+    automated: true
+
+  - id: AI_GOV_2
+    framework: Custom
+    control: AI-2
+    question: "How do you ensure AI does not bypass security controls?"
+    answer:
+      - AI rules explicitly prohibit weakening controls (fail-closed)
+      - Pre-commit hooks validate rules presence
+      - CI workflow enforces AI rules compliance
+      - Auto-merge restricted to LOW risk changes only
+      - Policy-driven controls with blocked file patterns
+    evidence:
+      - .ai/CLAUDE_RULES.md
+      - .ai/AUTO_MERGE_POLICY.yaml
+      - scripts/ai_rules_check.py
+      - .github/workflows/ai-rules-enforcement.yml
+    automated: true
+
+# ===========================================
+# Evidence Summary
+# ===========================================
+summary:
+  total_questions: 13
+  frameworks_covered:
+    - SOC2
+    - ISO27001
+    - Custom (AI Governance)
+  all_automated: true
+
+# ===========================================
+# Usage Instructions
+# ===========================================
+usage:
+  generate_answers: "python scripts/generate_audit_answers.py"
+  export_evidence: "python scripts/export_compliance_evidence.py"
+  update_frequency: "Review and update quarterly or after significant changes"

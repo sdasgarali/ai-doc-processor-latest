@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & Trust Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav class="portal-nav">
+                <a href="index.html" class="active">Overview</a>
+                <a href="soc2.html">SOC 2</a>
+                <a href="hipaa.html">HIPAA</a>
+                <a href="hitrust.html">HITRUST</a>
+            </nav>
+            <h1>Security & Trust</h1>
+            <p class="subtitle">Secure, Audited, AI-Governed Development Platform</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Certifications Section -->
+        <section class="card">
+            <h2>Certifications & Compliance</h2>
+            <div id="certifications" class="cert-grid">
+                <!-- Populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Security Controls Section -->
+        <section class="card">
+            <h2>Security Controls</h2>
+            <div id="controls" class="controls-list">
+                <!-- Populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Availability Section -->
+        <section class="card">
+            <h2>Availability & Incident Response</h2>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <span class="metric-value" id="monitoring-type">-</span>
+                    <span class="metric-label">Monitoring</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" id="mttr">-</span>
+                    <span class="metric-label">Mean Time to Respond</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" id="incident-type">-</span>
+                    <span class="metric-label">Incident Response</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Governance Section -->
+        <section class="card">
+            <h2>AI Governance</h2>
+            <div id="governance">
+                <ul>
+                    <li><strong>AI Rules Enforcement:</strong> All AI interactions governed by mandatory contract</li>
+                    <li><strong>Human Override:</strong> Human approval required for elevated risks</li>
+                    <li><strong>Auto-Merge Policy:</strong> Only LOW risk changes can auto-merge</li>
+                    <li><strong>Audit Trail:</strong> All AI actions logged and traceable</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Evidence Section -->
+        <section class="card">
+            <h2>Audit Evidence</h2>
+            <div class="evidence-stats">
+                <div class="stat">
+                    <span class="stat-value" id="soc2-controls">-</span>
+                    <span class="stat-label">SOC-2 Controls</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="iso-controls">-</span>
+                    <span class="stat-label">ISO 27001 Controls</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="evidence-count">-</span>
+                    <span class="stat-label">Evidence Entries</span>
+                </div>
+            </div>
+            <p class="evidence-note">Evidence is collected continuously and retained for 365 days.</p>
+        </section>
+
+        <!-- Contact Section -->
+        <section class="card">
+            <h2>Contact</h2>
+            <div id="contact">
+                <p>For security inquiries or compliance documentation requests:</p>
+                <ul>
+                    <li><strong>Security:</strong> <a href="mailto:security@example.com">security@example.com</a></li>
+                    <li><strong>Compliance:</strong> <a href="mailto:compliance@example.com">compliance@example.com</a></li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Last updated: <span id="last-updated">-</span></p>
+            <p class="footer-note">Data auto-generated from compliance systems.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Fetch and populate trust portal data
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                // Certifications
+                const certContainer = document.getElementById('certifications');
+                data.security.certifications.forEach(cert => {
+                    const div = document.createElement('div');
+                    div.className = 'cert-item';
+                    div.innerHTML = `
+                        <div class="cert-badge ${cert.status.includes('Active') ? 'active' : 'aligned'}">
+                            <span class="cert-icon">${cert.status.includes('Active') ? '&#128274;' : '&#9989;'}</span>
+                        </div>
+                        <div class="cert-info">
+                            <h3>${cert.name}</h3>
+                            <p class="cert-status">${cert.status}</p>
+                            <p class="cert-details">${cert.details}</p>
+                        </div>
+                    `;
+                    certContainer.appendChild(div);
+                });
+
+                // Controls
+                const controlsContainer = document.getElementById('controls');
+                data.security.controls.forEach(control => {
+                    const div = document.createElement('div');
+                    div.className = 'control-item';
+                    div.innerHTML = `
+                        <h4>${control.name}</h4>
+                        <p>${control.description}</p>
+                        <span class="evidence-tag">Evidence: ${control.evidence}</span>
+                    `;
+                    controlsContainer.appendChild(div);
+                });
+
+                // Availability metrics
+                document.getElementById('monitoring-type').textContent = data.availability.monitoring.type;
+                document.getElementById('mttr').textContent = data.availability.incident_response.mean_time_to_respond;
+                document.getElementById('incident-type').textContent = data.availability.incident_response.type;
+
+                // Evidence stats
+                document.getElementById('soc2-controls').textContent =
+                    `${data.compliance.soc2.controls_implemented}/${data.compliance.soc2.total_controls}`;
+                document.getElementById('iso-controls').textContent =
+                    `${data.compliance.iso27001.controls_implemented}/${data.compliance.iso27001.total_controls}`;
+                document.getElementById('evidence-count').textContent = data.compliance.soc2.evidence_entries;
+
+                // Last updated
+                const updated = new Date(data.metadata.generated);
+                document.getElementById('last-updated').textContent = updated.toLocaleDateString();
+            })
+            .catch(error => {
+                console.error('Error loading trust portal data:', error);
+                document.body.innerHTML += '<p class="error">Error loading data. Please try again later.</p>';
+            });
+    </script>
+</body>
+</html>

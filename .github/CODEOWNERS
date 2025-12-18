@@ -1,0 +1,24 @@
+# CODEOWNERS - Define code ownership for review requirements
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @your-team
+
+# AI Rules - Require architectural approval
+/.ai/ @your-team @architect
+
+# CI/CD Workflows - Require DevOps approval
+/.github/workflows/ @your-team @devops
+
+# Security-sensitive files
+/scripts/ai_engine.py @your-team @security
+/.env.example @your-team @security
+
+# Infrastructure
+/Dockerfile @your-team @devops
+/k8s/ @your-team @devops
+/terraform/ @your-team @devops
+
+# Documentation
+/README.md @your-team
+/docs/ @your-team

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HITRUST CSF Readiness - Trust Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav class="portal-nav">
+                <a href="index.html">Overview</a>
+                <a href="soc2.html">SOC 2</a>
+                <a href="hipaa.html">HIPAA</a>
+                <a href="hitrust.html" class="active">HITRUST</a>
+            </nav>
+            <h1>HITRUST CSF Readiness</h1>
+            <p class="subtitle">Common Security Framework Alignment</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Overview Section -->
+        <section class="card">
+            <h2>Program Overview</h2>
+            <p>
+                Our security program is aligned with HITRUST Common Security Framework (CSF) v11
+                requirements, providing a comprehensive approach to information security and
+                risk management.
+            </p>
+            <div class="status-badge aligned">
+                <span class="badge-icon">&#9989;</span>
+                <span class="badge-text">CSF Aligned</span>
+            </div>
+        </section>
+
+        <!-- Maturity Summary -->
+        <section class="card">
+            <h2>Maturity Assessment</h2>
+            <div class="maturity-summary">
+                <div class="maturity-score">
+                    <span class="score-value">4.2</span>
+                    <span class="score-max">/5</span>
+                </div>
+                <div class="maturity-level">
+                    <span class="level-label">Overall Maturity Level</span>
+                    <span class="level-value">Managed</span>
+                </div>
+            </div>
+            <div class="maturity-scale">
+                <div class="scale-item">
+                    <span class="scale-num">1</span>
+                    <span class="scale-name">Policy</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">2</span>
+                    <span class="scale-name">Procedure</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">3</span>
+                    <span class="scale-name">Implemented</span>
+                </div>
+                <div class="scale-item active">
+                    <span class="scale-num">4</span>
+                    <span class="scale-name">Measured</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">5</span>
+                    <span class="scale-name">Managed</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Control Domains -->
+        <section class="card">
+            <h2>Control Domains</h2>
+            <div class="domain-list">
+                <div class="domain-item">
+                    <div class="domain-header">
+                        <h4>Access Control</h4>
+                        <span class="domain-status">Implemented & Measured</span>
+                    </div>
+                    <p>GitHub RBAC, CODEOWNERS enforcement, protected branches, MFA required</p>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-header">
+                        <h4>Configuration Management</h4>
+                        <span class="domain-status">Enforced</span>
+                    </div>
+                    <p>Version-controlled CI/CD workflows, automated configuration validation</p>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-header">
+                        <h4>Vulnerability Management</h4>
+                        <span class="domain-status">Continuous</span>
+                    </div>
+                    <p>Automated security scanning, self-healing PR agent, immediate remediation</p>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-header">
+                        <h4>Incident Management</h4>
+                        <span class="domain-status">Measured</span>
+                    </div>
+                    <p>Automated detection, alerting, and response with metrics tracking</p>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-header">
+                        <h4>Business Continuity</h4>
+                        <span class="domain-status">Managed</span>
+                    </div>
+                    <p>Fallback systems, rollback capabilities, documented recovery procedures</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Certification Readiness -->
+        <section class="card">
+            <h2>Certification Readiness</h2>
+            <div class="cert-readiness">
+                <div class="cert-type">
+                    <h4>HITRUST e1</h4>
+                    <span class="readiness-status ready">Ready</span>
+                    <p>Essential 1-Year certification</p>
+                </div>
+                <div class="cert-type">
+                    <h4>HITRUST i1</h4>
+                    <span class="readiness-status near-ready">Near Ready</span>
+                    <p>Implemented 1-Year certification</p>
+                </div>
+                <div class="cert-type">
+                    <h4>HITRUST r2</h4>
+                    <span class="readiness-status ready">Ready</span>
+                    <p>Risk-Based 2-Year certification</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gap Analysis -->
+        <section class="card">
+            <h2>Continuous Improvement</h2>
+            <p>
+                We maintain an r2 readiness gap analysis that is reviewed and updated regularly.
+                Current focus areas include:
+            </p>
+            <ul class="improvement-list">
+                <li>Formalizing periodic review documentation</li>
+                <li>Enhancing root cause analysis processes</li>
+                <li>Implementing incident trending reports</li>
+            </ul>
+            <div class="gap-summary">
+                <div class="gap-stat">
+                    <span class="gap-value">25</span>
+                    <span class="gap-label">Controls Assessed</span>
+                </div>
+                <div class="gap-stat">
+                    <span class="gap-value">5</span>
+                    <span class="gap-label">Gaps Identified</span>
+                </div>
+                <div class="gap-stat">
+                    <span class="gap-value">0</span>
+                    <span class="gap-label">Critical Gaps</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Governance Extension -->
+        <section class="card">
+            <h2>AI Governance Controls</h2>
+            <p>
+                Our HITRUST implementation includes custom AI governance controls
+                beyond standard CSF requirements:
+            </p>
+            <div class="ai-governance">
+                <div class="ai-control">
+                    <h4>AI.01 - AI Usage Policy</h4>
+                    <p>Documented governance rules, risk-based automation limits</p>
+                </div>
+                <div class="ai-control">
+                    <h4>AI.02 - AI Decision Logging</h4>
+                    <p>Comprehensive audit trail of all AI-assisted decisions</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Evidence -->
+        <section class="card">
+            <h2>Evidence Collection</h2>
+            <p>
+                Evidence is collected continuously and organized by HITRUST domain
+                for certification readiness:
+            </p>
+            <ul class="evidence-categories">
+                <li><strong>Policy:</strong> Security policies, governance documents</li>
+                <li><strong>Procedure:</strong> Workflow definitions, process documentation</li>
+                <li><strong>Implementation:</strong> Configuration files, system outputs</li>
+                <li><strong>Measurement:</strong> Compliance scores, audit reports</li>
+                <li><strong>Management:</strong> Review records, improvement plans</li>
+            </ul>
+        </section>
+
+        <!-- Contact -->
+        <section class="card">
+            <h2>Contact</h2>
+            <div class="contact-info">
+                <p><strong>Security Inquiries:</strong> <a href="mailto:security@example.com">security@example.com</a></p>
+                <p><strong>Compliance Team:</strong> <a href="mailto:compliance@example.com">compliance@example.com</a></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Data auto-generated from compliance systems.</p>
+            <p class="footer-note">Gap analysis maintained and reviewed quarterly.</p>
+        </div>
+    </footer>
+</body>
+</html>

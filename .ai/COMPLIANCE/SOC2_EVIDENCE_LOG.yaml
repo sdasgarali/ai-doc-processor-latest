@@ -1,0 +1,39 @@
+# ===========================================
+# SOC-2 Type II Evidence Log
+# ===========================================
+# This file grows automatically over time.
+# Each entry represents a control operating effectively.
+#
+# DO NOT EDIT MANUALLY - Use scripts/collect_type2_evidence.py
+# ===========================================
+
+metadata:
+  created: "2025-01-01T00:00:00Z"
+  last_updated: "2025-01-01T00:00:00Z"
+  total_entries: 0
+
+# Evidence entries (appended automatically)
+evidence_log: []
+
+# Example entries (for reference):
+# evidence_log:
+#   - timestamp: "2025-02-12T14:32:10Z"
+#     control: CC6.6
+#     event: "Pull request merged"
+#     repo: "billing-service"
+#     reference: "PR #143"
+#     actor: "developer@example.com"
+#     details:
+#       tests_passed: true
+#       coverage: 87.5
+#       ai_review: completed
+#
+#   - timestamp: "2025-02-13T09:11:42Z"
+#     control: CC7.2
+#     event: "CI failure auto-remediated"
+#     repo: "claims-pipeline"
+#     reference: "ai-self-heal commit abc123"
+#     actor: "ai-self-heal-bot"
+#     details:
+#       failure_type: "lint"
+#       resolution_time_seconds: 45

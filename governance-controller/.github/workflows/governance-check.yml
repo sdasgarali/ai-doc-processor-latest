@@ -1,0 +1,43 @@
+# Org-Wide Governance Check
+# Runs nightly to ensure all repos comply with AI governance
+
+name: Governance Compliance Check
+
+on:
+  schedule:
+    # Run at 2 AM UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  compliance-check:
+    name: "Check Repository Compliance"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install pyyaml
+
+      - name: Run Governance Controller
+        env:
+          GITHUB_TOKEN: ${{ secrets.GOVERNANCE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python governance-controller/controller.py
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-report
+          path: governance-controller/compliance_report.md
+          retention-days: 30

@@ -1,0 +1,68 @@
+# ===========================================
+# Auto-Merge Policy Configuration
+# ===========================================
+# This file controls automated merge behavior.
+# Change policy here - no code changes required.
+#
+# SAFETY: Only LOW risk PRs can be auto-merged.
+# ===========================================
+
+version: 1
+
+auto_merge:
+  # Master switch - set to false to disable all auto-merge
+  enabled: true
+
+  # Maximum risk level allowed for auto-merge
+  # Options: LOW (only LOW is safe for auto-merge)
+  max_risk: LOW
+
+  # Require all CI checks to pass
+  require_green_ci: true
+
+  # Minimum AI confidence score (0.0 - 1.0)
+  require_ai_confidence: 0.85
+
+  # Categories of changes allowed for auto-merge
+  allowed_categories:
+    - formatting
+    - lint
+    - tests
+    - docs
+    - comments
+    - typos
+
+  # Files/patterns that NEVER auto-merge (even if LOW risk)
+  # Uses glob patterns
+  blocked_files:
+    - ".github/workflows/*"
+    - "infra/**"
+    - "security/**"
+    - "*.env*"
+    - "secrets.*"
+    - "credentials.*"
+    - "pyproject.toml"
+    - "package.json"
+    - "requirements.txt"
+
+  # Require at least one human approval before auto-merge
+  require_human_approval: false
+
+  # Maximum number of files changed (safety limit)
+  max_files_changed: 10
+
+  # Maximum lines changed (safety limit)
+  max_lines_changed: 100
+
+# ===========================================
+# Audit Settings
+# ===========================================
+audit:
+  # Log all auto-merge decisions
+  log_decisions: true
+
+  # Notify on auto-merge
+  slack_notify: true
+
+  # Track in metrics database
+  record_metrics: true

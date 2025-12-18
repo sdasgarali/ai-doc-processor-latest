@@ -1,0 +1,158 @@
+# ===========================================
+# SOC-2 Type II Controls Configuration
+# ===========================================
+# Type II = Controls operated effectively OVER TIME
+# This file defines what evidence is collected and how often.
+# ===========================================
+
+version: "1.0"
+framework: "SOC-2 Type II"
+
+# Audit period (rolling 12 months recommended)
+period:
+  start: "2025-01-01"
+  end: "2025-12-31"
+  timezone: "UTC"
+
+# Control definitions with evidence sources
+controls:
+  # ===========================================
+  # CC6 - Logical and Physical Access Controls
+  # ===========================================
+  CC6.1:
+    description: "Logical access security software, infrastructure, and architectures"
+    evidence_sources:
+      - github_branch_protection
+      - pr_reviews
+      - ci_enforcement
+      - codeowners_validation
+    frequency: continuous
+    collection_method: automated
+    retention_days: 365
+
+  CC6.2:
+    description: "Prior to issuing system credentials, identity is verified"
+    evidence_sources:
+      - github_org_membership
+      - mfa_enforcement
+    frequency: on_access_change
+    collection_method: manual
+    retention_days: 365
+
+  CC6.6:
+    description: "Changes are authorized, tested, and approved before implementation"
+    evidence_sources:
+      - pull_requests
+      - ci_pipeline_runs
+      - ai_rules_enforcement
+      - test_coverage_reports
+    frequency: per_change
+    collection_method: automated
+    retention_days: 365
+
+  CC6.7:
+    description: "Changes to infrastructure are restricted and managed"
+    evidence_sources:
+      - workflow_changes
+      - infrastructure_prs
+      - blocked_auto_merge
+    frequency: per_change
+    collection_method: automated
+    retention_days: 365
+
+  # ===========================================
+  # CC7 - System Operations
+  # ===========================================
+  CC7.1:
+    description: "Configuration and vulnerabilities are monitored"
+    evidence_sources:
+      - security_scan_results
+      - vulnerability_reports
+      - governance_controller_runs
+    frequency: continuous
+    collection_method: automated
+    retention_days: 365
+
+  CC7.2:
+    description: "Incidents are identified, analyzed, and responded to"
+    evidence_sources:
+      - ci_failures
+      - self_healing_events
+      - slack_notifications
+      - pr_comments
+    frequency: event_based
+    collection_method: automated
+    retention_days: 365
+
+  CC7.3:
+    description: "Changes are evaluated and approved before implementation"
+    evidence_sources:
+      - risk_classifications
+      - ai_review_results
+      - approval_records
+    frequency: per_change
+    collection_method: automated
+    retention_days: 365
+
+  # ===========================================
+  # CC8 - Change Management
+  # ===========================================
+  CC8.1:
+    description: "Changes are authorized, designed, developed, tested, and approved"
+    evidence_sources:
+      - pr_history
+      - ci_test_results
+      - approval_timestamps
+      - ai_changelog
+    frequency: per_change
+    collection_method: automated
+    retention_days: 365
+
+# ===========================================
+# Evidence Collection Settings
+# ===========================================
+collection:
+  # Where evidence is logged
+  log_file: ".ai/COMPLIANCE/SOC2_EVIDENCE_LOG.yaml"
+
+  # Auto-collect from these sources
+  auto_sources:
+    - github_api
+    - ci_pipeline
+    - ai_metrics_db
+
+  # Webhook endpoints for real-time collection
+  webhooks:
+    enabled: false
+    endpoint: null
+
+# ===========================================
+# Reporting Settings
+# ===========================================
+reporting:
+  # Generate reports at these intervals
+  schedule:
+    weekly_summary: true
+    monthly_report: true
+    quarterly_audit_prep: true
+
+  # Report output location
+  output_dir: "reports/"
+
+  # Report formats
+  formats:
+    - markdown
+    - json
+
+# ===========================================
+# Audit Preparation
+# ===========================================
+audit:
+  # Minimum evidence count per control for Type II
+  min_evidence_per_control: 50
+
+  # Alert if evidence gaps detected
+  gap_detection: true
+
+  # Days before audit to start prep
+  prep_lead_days: 30
