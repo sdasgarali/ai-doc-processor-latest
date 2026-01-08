@@ -1,0 +1,125 @@
+You are a highly skilled enterprise level system designer and developer with highly user friendly UI/UX and end-to-end integration between backend (My SQL) and front end. Develope the following system and integrate with the The n8n workflow ([link](http://localhost:5678/workflow/Z0rxBnTp1NrUlJy8)) in my localhost.
+System: # Scenario Overview
+Multiple users worldwide will concurrently upload PDF documents via the UI. Each document may have a varying number of pages. Upon upload, each file is placed in the Google Drive `eob-source` folder. The n8n workflow ((C:\Users\AsgarAliSayed\Downloads\EOB_data_Extract_OCR-API__n8n_latest_v8_eob_assistant (2).json) is triggered automatically as files arrive, processing them immediately and returning both JSON and CSV results to the `eob-results` folder in Google Drive. The process should minimize latency and maximize data accuracy by continuously monitoring the designated upload location for new files and ensuring prompt handling. Files beginning with `Processed_` are not re-processed; display the message "Already Processed" if encountered.
+
+Begin with a concise checklist (3-7 bullets) of what you will do; keep items conceptual, not implementation-level.
+
+After each major process step, particularly parallel and tool-driven steps, validate results in 1-2 lines before proceeding or self-correcting if validation fails.
+
+### Key Steps Checklist
+- Monitor the Google Drive `eob-source` folder for newly uploaded PDF files in real time.
+- Trigger the n8n workflow automatically for each new file and process instantly.
+- If the database `documentprocessingdb` does not exist on localhost, create it with the specified credentials.
+- Prepare and maintain required tables, including support for multiple document categories via the `doc_category` table.
+- After a user uploads and selects the document type, display a progress bar reflecting completion by `client_id` and model mapping.
+- Split, process, consolidate, and output files according to defined processing rules and naming conventions.
+- Present processed documents and extraction results in the UI with comprehensive download and viewing options.
+
+### Database Structure
+- **Database Name:** `documentprocessingdb_claude` (host: localhost)
+    - user: root
+    - password: AdminRootDBAli
+
+#### Required Tables
+- `user_profile`: userid, email, password, last_login, user_role (user, admin, superadmin, client), client_id
+- `document_processed`: process_id, doc_name, no_of_pages, processing_status (In-Progress/Processed/Failed), time_initiated, time_finished, total_processing_time, link_to_file, link_to_csv, link_to_json
+- `client`: client_id, client_name, contact_name, email, phone_no, date_started, status (active/inactive), active_model
+- `field_table`: field_id, field_name, doc_category
+- `feld_mapping`: model_id, field1_id, field2_id, ...
+- `doc_category`: unique IDs for document types (e.g., 1 for 'eob', 2 for 'facesheet'); administrable through the admin panel
+
+### UI Modules
+- User Management
+- Access Permission Management
+- Client Management
+- Profile Management with password reset
+
+Admin panel also supports:
+- Model Configuration (mapping management: add/edit/delete/view)
+- Field-level keyword management
+
+# Processing Rules
+- **PDF Splitting:** For PDFs over 30 pages, split into files each containing =30 pages. Process all parts in parallel. Consolidate results from all parts into a single output (JSON/CSV) using the original base filename with the `_consolidated` suffix.
+- **Filename Convention:** Outputs are placed in a `Results` directory (create if absent). When identically named files are uploaded simultaneously, append a unique user/session identifier and timestamp to the outputs. Record a unique processing ID for each processed document.
+- **UI Requirements:** The processed documents list in the UI shows process_id, model_id, doc_name, no_of_pages, processing_status, time_initiated, time_finished, total_processing_time, and download links (original, CSV, JSON, ZIP with download icons). Clicking Process_Id displays extracted data in a table format. Data is available in the UI directly as well.
+- **Page Numbering:** Always output a single `Page_No` column, referencing the original page number in the full PDF for each data element (e.g., patient_account, patient_name).
+
+# Data Extraction Logic
+- Use Document AI for data extraction. Identify columns via mapped "Column Name" and associated keyword patterns, scanning each page for matches.
+- Exclude non-patient-related data unless specifically mapped.
+- Preserve input record order in outputs; in ambiguous cases, maintain sequence as in the PDF.
+
+# Edge Cases & Error Handling
+- For malformed PDFs, extraction failures, or processing errors, write error details per row to a CSV `Error` column and in the JSON under an `errors` array, following the schema.
+- Every output must reference its session and original file clearly to prevent misassociation or data leakage.
+- After major (especially parallel) process steps, validate results briefly (1–2 lines); proceed or attempt autocorrection as needed.
+
+# Mapping Configuration
+- Allow client-admin configuration of column mappings through the Model Configuration UI (add/edit/delete). Persist mappings for future sessions.
+- Internationalization support (localization, time zone handling, etc.) is needed for global operation.
+
+---
+
+## Output Format
+### JSON Schema
+```json
+{
+  "input_file": string,
+  "session_id": string,          // Unique user-session identifier (e.g., user123_20240609_114523)
+  "processing_id": string,       // Unique identifier for this processing session
+  "results": [                   // Extracted records per page, in original PDF order
+    {
+      "Original_Page_No": number,
+      "EOB_Page_No": number,
+      "patient_acct": string,
+      "Patient_ID": string,
+      "Claim_ID": string,
+      "Patient_Name": string,
+      "First_Name": string,
+      "Last_Name": string,
+      "member_number": string,
+      "service_date": string,    // (Format: YYYY-MM-DD)
+      "allowed_amount": number,
+      "interest_amount": number,
+      "paid_amount": number,
+      "insurance_co": string,
+      "billed_amount": number,
+      "cpt_hcpcs": string,
+      "adj_co45": number,
+      "adj_co144": number,
+      "adj_co253": number,
+      "check_number": string,
+      "account_number": string,
+      "patient_responsibility": number,
+      "claim_summary": string,
+      "action_required": string,
+      "reason_code_comments": string,
+      "Confidence_Score": number, // (Range: 0–1 for probability, or 0–100 for percent; specify format in output)
+      // Additional dynamic mapping fields (inferred types; default: string)
+    }
+  ],
+  "errors": [                    // Error objects, per-page or global
+    {
+      "page": number | null,     // Page-specific or global error
+      "error": string            // Error message
+      // Additional keys supported as needed
+    }
+  ]
+}
+```
+
+### CSV Format
+- The first 25 required columns (see above) always appear first, ordered as listed.
+- Additional dynamic mapping fields follow, then the `Error` column (always rightmost).
+- Fields with commas, quotes, or line breaks must be double-quoted, with embedded double quotes escaped.
+- Sample header:
+
+```csv
+Page_No,patient_acct,Patient_ID,Claim_ID,Patient_Name,First_Name,Last_Name,member_number,service_date,allowed_amount,interest_amount,paid_amount,insurance_co,billed_amount,cpt_hcpcs,adj_co45,adj_co144,adj_co253,check_number,account_number,patient_responsibility,claim_summary,action_required,reason_code_comments,Confidence_Score,...dynamic_mapping_fields...,Error
+```
+- If a mapped/extracted field is missing, leave the cell empty unless an error is present; then set the Error column accordingly.
+- Row ordering always matches the order of the source PDF.
+- Include session and processing IDs in both JSON and CSV output (as metadata rows on top of CSV or as columns fields).
+- Dynamically mapped fields follow the initial 25 outputs, defaulting to string type unless otherwise specified.
+- JSON error messages should follow `{ "page": number|null, "error": string, ... }`, allowing additional keys for more complex issues.
+- `Confidence_Score` is a probability (0–1) or a percent (0–100), must be consistent within each output.

@@ -1,0 +1,186 @@
+{
+  "name": "EOB Processing with Document Category Routing - Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eob-process",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "fb783dbb-0096-4ade-a6c6-4f7012b9e734"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $input.first().json.body;\nreturn [{\n  json: {\n    processId: webhookData.processId,\n    filename: webhookData.filename,\n    originalFilename: webhookData.originalFilename,\n    driveFileId: webhookData.driveFileId,\n    userid: webhookData.userid,\n    clientId: webhookData.clientId,\n    sessionId: webhookData.sessionId,\n    modelId: webhookData.modelId || 2,\n    docCategory: String(webhookData.docCategory),\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "extract-process-data",
+      "name": "Extract Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 380]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.docCategory }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "1",
+              "output": 0
+            },
+            {
+              "value2": "2",
+              "output": 1
+            },
+            {
+              "value2": "3",
+              "output": 2
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "switch-doc-category",
+      "name": "Route by Document Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json;\nconsole.log('Sending results to upload service:', results.processId);\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `http://127.0.0.1:3000/api/documents/${results.processId}/n8n-results`,\n    json: true,\n    body: {\n      processId: results.processId,\n      status: results.status || 'Processed',\n      processingTimeSeconds: results.processingTimeSeconds || 0,\n      documentAiCost: results.documentAiCost || 0,\n      openAiCost: results.openAiCost || 0,\n      totalCost: results.totalCost || 0,\n      totalRecords: results.totalRecords || 0,\n      noOfPages: results.noOfPages || 0,\n      jsonDriveUrl: results.jsonDriveUrl || null,\n      csvDriveUrl: results.csvDriveUrl || null,\n      jsonDriveId: results.jsonDriveId || null,\n      csvDriveId: results.csvDriveId || null\n    }\n  });\n  console.log('✓ Results sent successfully');\n  return [{ json: { status: 'success', response: response } }];\n} catch (error) {\n  console.error('✗ Failed to send results:', error.message);\n  return [{ json: { status: 'error', error: error.message } }];\n}"
+      },
+      "id": "send-results",
+      "name": "Send Results to Upload Service",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 380]
+    },
+    {
+      "parameters": {},
+      "id": "placeholder-eob",
+      "name": "EOB Processing Chain Goes Here",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 180],
+      "notes": "Connect your existing EOB processing nodes here:\n1. Get Model Pricing\n2. Get DocAI Cost Config\n3. Wait for Drive Upload\n4. Download PDF from Drive\n5. Execute Python - Document AI\n6. Parse Python Output\n7. OpenAI - Extract EOB Data\n8. Calculate Document AI Cost\n9. Calculate OpenAI Cost\n10. Calculate Total Cost & Time\n11. Prepare JSON\n12. Prepare CSV\n13. JSON to Binary\n14. CSV to Binary\n15. Upload JSON to eob-results\n16. Upload CSV to eob-results\n17. Move & Rename PDF\n18. Prepare Results Payload\n\nThen connect final node to 'Send Results to Upload Service'"
+    },
+    {
+      "parameters": {},
+      "id": "placeholder-facesheet",
+      "name": "Facesheet Processing Chain Goes Here",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 380],
+      "notes": "Duplicate the EOB chain and:\n1. Rename all nodes (add '-Facesheet' suffix)\n2. Update OpenAI prompt to extract:\n   - patient_name, first_name, last_name\n   - date_of_birth (MM/DD/YYYY)\n   - medical_record_number, account_number\n   - admission_date, discharge_date\n   - insurance_company, insurance_id\n   - diagnosis_codes, procedure_codes\n   - attending_physician, facility_name\n   - patient_address, phone_number\n   - emergency_contact, emergency_phone\n   - allergies, medications\n\nThen connect final node to 'Send Results to Upload Service'"
+    },
+    {
+      "parameters": {},
+      "id": "placeholder-invoice",
+      "name": "Invoice Processing Chain Goes Here",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 580],
+      "notes": "Duplicate the EOB chain and:\n1. Rename all nodes (add '-Invoice' suffix)\n2. Update OpenAI prompt to extract:\n   - invoice_number, invoice_date\n   - vendor_name, vendor_address, vendor_tax_id\n   - customer_name, billing_address\n   - po_number, due_date\n   - line_items[] (description, quantity, unit_price, total)\n   - subtotal, tax_amount, tax_rate\n   - total_amount, amount_due\n   - payment_terms, payment_method\n   - currency, notes\n\nThen connect final node to 'Send Results to Upload Service'"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Process Data": {
+      "main": [
+        [
+          {
+            "node": "Route by Document Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Document Category": {
+      "main": [
+        [
+          {
+            "node": "EOB Processing Chain Goes Here",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Facesheet Processing Chain Goes Here",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invoice Processing Chain Goes Here",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EOB Processing Chain Goes Here": {
+      "main": [
+        [
+          {
+            "node": "Send Results to Upload Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facesheet Processing Chain Goes Here": {
+      "main": [
+        [
+          {
+            "node": "Send Results to Upload Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Processing Chain Goes Here": {
+      "main": [
+        [
+          {
+            "node": "Send Results to Upload Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fixed-version",
+  "meta": {
+    "instanceId": "a839365551ba2f9c600cf76bdedca7e00a3fcbe564410c8e45e7ede24e6084de"
+  },
+  "id": "fixed-workflow",
+  "tags": []
+}

@@ -1,0 +1,575 @@
+{
+  "name": "EOB_Processing_Webhook_v3_FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eob-process",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "eob-process"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract webhook data\nconst webhookData = $input.first().json.body;\n\nreturn [{\n  json: {\n    processId: webhookData.processId,\n    filename: webhookData.filename,\n    originalFilename: webhookData.originalFilename,\n    driveFileId: webhookData.driveFileId,\n    userid: webhookData.userid,\n    clientId: webhookData.clientId,\n    sessionId: webhookData.sessionId,\n    modelId: webhookData.modelId || 2,\n    docCategory: webhookData.docCategory,\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "extract-process-id",
+      "name": "Extract Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch model pricing from API (FIXED)\nconst items = $input.all();\nconst processData = items[0].json;\nconst modelId = processData.modelId || 2;\n\nconsole.log('Fetching pricing for model:', modelId);\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `http://127.0.0.1:3000/api/admin/openai-models/${modelId}/pricing`,\n  json: true\n});\n\nconsole.log('Model pricing fetched:', response.data.model_name);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "get-model-pricing",
+      "name": "Get Model Pricing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch DocAI cost config (FIXED)\nconst items = $input.all();\n\nconsole.log('Fetching DocAI cost config');\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'http://127.0.0.1:3000/api/admin/config/docai_cost_per_page',\n  json: true\n});\n\nconsole.log('DocAI cost:', response.data.value);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "get-docai-cost",
+      "name": "Get Document AI Cost Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait for file to be available in Google Drive\n// In production, you might want to poll or use a longer wait\nawait new Promise(resolve => setTimeout(resolve, 2000));\n\nconst processData = $('Extract Process Data').first().json;\n\nreturn [{\n  json: {\n    ...processData,\n    driveFileReady: true\n  }\n}];"
+      },
+      "id": "wait-for-file",
+      "name": "Wait for Drive Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $('Extract Process Data').first().json.driveFileId }}",
+        "options": {}
+      },
+      "id": "download-pdf",
+      "name": "Download PDF from Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1250,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=python \"C:\\Automation\\AI Agents\\GCloud Document AI\\Eob_process_n8n\\eob_process_with_DocAI_n8n_without_watching_v6.py\" \"H:/My Drive/AAA AI-Training/Document Processing/EOB-Extractor/eob-source/{{ $('Extract Process Data').first().json.filename }}\"",
+        "timeout": 300000
+      },
+      "id": "execute-python",
+      "name": "Execute Python - Document AI",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Document AI cost dynamically\nconst pythonOutput = $input.first().json;\nconst docAiConfig = $('Get Document AI Cost Config').first().json.data;\n\n// Extract number of pages from python output\nlet pages = 0;\n\nif (pythonOutput.data && pythonOutput.data.pages) {\n  pages = pythonOutput.data.pages;\n}\n\nconst costPerPage = parseFloat(docAiConfig.value || 0.015);\nconst documentAiCost = pages * costPerPage;\n\nconsole.log(`Document AI Cost: ${pages} pages × $${costPerPage} = $${documentAiCost.toFixed(4)}`);\n\nreturn [{\n  json: {\n    documentAiCost: parseFloat(documentAiCost.toFixed(4)),\n    pages: pages,\n    costPerPage: costPerPage\n  }\n}];"
+      },
+      "id": "calc-docai-cost",
+      "name": "Calculate Document AI Cost",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Python script output to extract JSON data\nconst output = $input.first().json.stdout || '';\n\n// Find JSON between markers\nconst startMarker = '===JSON_START===';\nconst endMarker = '===JSON_END===';\n\nconst startIdx = output.indexOf(startMarker);\nconst endIdx = output.indexOf(endMarker);\n\nif (startIdx === -1 || endIdx === -1) {\n  throw new Error('Could not find JSON markers in Python output');\n}\n\nconst jsonStr = output.substring(startIdx + startMarker.length, endIdx).trim();\nconst data = JSON.parse(jsonStr);\n\nreturn [{\n  json: {\n    data: data,\n    pages: data.pages || 0,\n    rawDataPath: data.raw_data_file || ''\n  }\n}];"
+      },
+      "id": "parse-python-output",
+      "name": "Parse Python Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "={{ $('Get Model Pricing').first().json.data.model_code }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a document EOB data-extraction expert. Your task is to accurately extract and structure EOB (Explanation of Benefits) information from the provided document data.\n\nExtract the following fields for each EOB entry:\n- Original_page_no: Original document page number\n- EOB_page_no: EOB-specific page number\n- patient_acct: Full patient account number\n- Patient_ID: First part before hyphen\n- Claim_ID: Second part after hyphen\n- Patient_Name: Full name as appears\n- First_Name: Patient's first name\n- Last_Name: Patient's last name\n- Date_of_Birth: DOB (MM/DD/YYYY)\n- SSN: Social Security Number\n- Provider_Name: Healthcare provider name\n- Service_Date_From: Service start date\n- Service_Date_To: Service end date\n- Total_Charges: Total amount charged\n- Plan_Paid: Amount paid by insurance\n- Patient_Responsibility: Amount patient owes\n- Deductible: Deductible amount\n- Copay: Copay amount\n- Coinsurance: Coinsurance amount\n- Claim_Number: Insurance claim number\n- Group_Number: Insurance group number\n- Subscriber_Name: Insurance subscriber name\n- Relationship_to_Subscriber: Patient relationship to subscriber\n- Diagnosis_Codes: List of diagnosis codes\n- Procedure_Codes: List of procedure codes\n- Service_Description: Description of services\n- Provider_NPI: Provider NPI number\n- Insurance_Name: Insurance company name\n- Plan_Type: Type of insurance plan\n- Remarks: Any additional notes\n- Confidence_Score: Your confidence in extraction (0-100)\n\nOutput Format: Return a JSON object with:\n{\n  \"data\": [\n    { ...extracted fields for each EOB entry... }\n  ],\n  \"summary\": {\n    \"total_records\": number,\n    \"avg_confidence\": number\n  }\n}\n\nEnsure all monetary values are numbers, dates are in consistent format, and include confidence scores for each extracted record."
+            },
+            {
+              "message": "=Extract EOB data from this document:\n\n{{ JSON.stringify($('Parse Python Output').first().json.data) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 4000
+        }
+      },
+      "id": "openai-extract",
+      "name": "OpenAI - Extract EOB Data",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "2",
+          "name": "EOB-Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate OpenAI cost dynamically\nconst aiResponse = $input.first().json;\nconst modelPricing = $('Get Model Pricing').first().json.data;\n\nconst inputTokens = aiResponse.usage?.prompt_tokens || 0;\nconst outputTokens = aiResponse.usage?.completion_tokens || 0;\n\nconst inputCostPer1k = parseFloat(modelPricing.input_cost_per_1k || 0.00015);\nconst outputCostPer1k = parseFloat(modelPricing.output_cost_per_1k || 0.0006);\n\nconst openAiCost = (inputTokens / 1000 * inputCostPer1k) + (outputTokens / 1000 * outputCostPer1k);\n\nconsole.log(`OpenAI Cost: ${inputTokens} input + ${outputTokens} output tokens = $${openAiCost.toFixed(4)}`);\nconsole.log(`Model: ${modelPricing.model_name} (${modelPricing.model_code})`);\n\nreturn [{\n  json: {\n    openAiCost: parseFloat(openAiCost.toFixed(4)),\n    inputTokens: inputTokens,\n    outputTokens: outputTokens,\n    totalTokens: inputTokens + outputTokens,\n    modelName: modelPricing.model_name,\n    modelCode: modelPricing.model_code,\n    inputCostPer1k: inputCostPer1k,\n    outputCostPer1k: outputCostPer1k\n  }\n}];"
+      },
+      "id": "calc-openai-cost",
+      "name": "Calculate OpenAI Cost",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate total cost and processing time\nconst processData = $('Extract Process Data').first().json;\nconst docAiCost = $('Calculate Document AI Cost').first().json;\nconst openAiCost = $('Calculate OpenAI Cost').first().json;\n\nconst startTime = new Date(processData.startTime);\nconst endTime = new Date();\nconst processingTimeMs = endTime - startTime;\nconst processingTimeSeconds = Math.round(processingTimeMs / 1000);\n\nconst totalCost = parseFloat((docAiCost.documentAiCost + openAiCost.openAiCost).toFixed(4));\n\nconsole.log(`Total Cost: $${totalCost} (DocAI: $${docAiCost.documentAiCost} + OpenAI: $${openAiCost.openAiCost})`);\nconsole.log(`Processing Time: ${processingTimeSeconds} seconds`);\n\nreturn [{\n  json: {\n    totalCost: totalCost,\n    documentAiCost: docAiCost.documentAiCost,\n    openAiCost: openAiCost.openAiCost,\n    processingTimeSeconds: processingTimeSeconds,\n    processingTimeMs: processingTimeMs,\n    pages: docAiCost.pages,\n    inputTokens: openAiCost.inputTokens,\n    outputTokens: openAiCost.outputTokens,\n    modelUsed: openAiCost.modelName\n  }\n}];"
+      },
+      "id": "calc-total-cost",
+      "name": "Calculate Total Cost & Time",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare JSON output (NO TIMESTAMP)\nconst aiResponse = $('OpenAI - Extract EOB Data').first().json;\nconst processData = $('Extract Process Data').first().json;\nconst costData = $('Calculate Total Cost & Time').first().json;\n\nlet extractedData;\n\n// Handle different OpenAI response formats\nif (aiResponse.message) {\n  const content = aiResponse.message.content || aiResponse.message;\n  if (typeof content === 'string') {\n    extractedData = JSON.parse(content);\n  } else {\n    extractedData = content;\n  }\n} else if (aiResponse.choices && aiResponse.choices[0]) {\n  const content = aiResponse.choices[0].message.content;\n  extractedData = JSON.parse(content);\n} else if (typeof aiResponse === 'string') {\n  extractedData = JSON.parse(aiResponse);\n} else if (aiResponse.data) {\n  extractedData = aiResponse.data;\n} else {\n  extractedData = aiResponse;\n}\n\nconst baseFilename = processData.originalFilename.replace('.pdf', '');\nconst jsonFilename = `extracted_${baseFilename}.json`;\n\nconst jsonOutput = {\n  data: extractedData.data || extractedData,\n  metadata: {\n    original_pdf: processData.originalFilename,\n    process_id: processData.processId,\n    processed_at: new Date().toISOString(),\n    source: 'Document AI + OpenAI',\n    model_used: costData.modelUsed,\n    total_records: (extractedData.data || extractedData).length || 0,\n    pages: costData.pages,\n    processing_time_seconds: costData.processingTimeSeconds,\n    costs: {\n      document_ai: costData.documentAiCost,\n      openai: costData.openAiCost,\n      total: costData.totalCost\n    },\n    tokens: {\n      input: costData.inputTokens,\n      output: costData.outputTokens\n    },\n    summary: extractedData.summary || {}\n  }\n};\n\nreturn [{\n  json: {\n    jsonOutput: jsonOutput,\n    jsonFilename: jsonFilename,\n    extractedRecords: extractedData.data || extractedData,\n    totalRecords: (extractedData.data || extractedData).length || 0\n  }\n}];"
+      },
+      "id": "prepare-json",
+      "name": "Prepare JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare CSV output (NO TIMESTAMP)\nconst jsonData = $('Prepare JSON').first().json;\nconst processData = $('Extract Process Data').first().json;\n\nconst records = jsonData.extractedRecords || [];\n\nif (records.length === 0) {\n  return [{\n    json: {\n      csvFilename: '',\n      csvContent: '',\n      error: 'No records to convert to CSV'\n    }\n  }];\n}\n\n// Get all unique keys from all records\nconst allKeys = new Set();\nrecords.forEach(record => {\n  Object.keys(record).forEach(key => allKeys.add(key));\n});\n\nconst headers = Array.from(allKeys);\n\n// Build CSV\nconst csvRows = [];\ncsvRows.push(headers.join(','));\n\nrecords.forEach(record => {\n  const row = headers.map(header => {\n    const value = record[header] || '';\n    // Escape values with commas or quotes\n    if (typeof value === 'string' && (value.includes(',') || value.includes('\"'))) {\n      return `\"${value.replace(/\"/g, '\"\"')}\"`;\n    }\n    return value;\n  });\n  csvRows.push(row.join(','));\n});\n\nconst csvContent = csvRows.join('\\n');\nconst baseFilename = processData.originalFilename.replace('.pdf', '');\nconst csvFilename = `extracted_${baseFilename}.csv`;\n\nreturn [{\n  json: {\n    csvFilename: csvFilename,\n    csvContent: csvContent\n  }\n}];"
+      },
+      "id": "prepare-csv",
+      "name": "Prepare CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2250,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert JSON to binary for upload\nconst jsonData = $('Prepare JSON').first().json;\nconst jsonStr = JSON.stringify(jsonData.jsonOutput, null, 2);\nconst buffer = Buffer.from(jsonStr, 'utf8');\n\nreturn [{\n  json: {\n    filename: jsonData.jsonFilename\n  },\n  binary: {\n    data: {\n      data: buffer.toString('base64'),\n      mimeType: 'application/json',\n      fileName: jsonData.jsonFilename\n    }\n  }\n}];"
+      },
+      "id": "json-to-binary",
+      "name": "JSON to Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert CSV to binary for upload\nconst csvData = $('Prepare CSV').first().json;\nconst buffer = Buffer.from(csvData.csvContent, 'utf8');\n\nreturn [{\n  json: {\n    filename: csvData.csvFilename\n  },\n  binary: {\n    data: {\n      data: buffer.toString('base64'),\n      mimeType: 'text/csv',\n      fileName: csvData.csvFilename\n    }\n  }\n}];"
+      },
+      "id": "csv-to-binary",
+      "name": "CSV to Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "folderId": "140_11GaATZVV3Ez7aQE7FGJJ4DHWXVFR",
+        "options": {}
+      },
+      "id": "upload-json",
+      "name": "Upload JSON to eob-results",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2650,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "folderId": "140_11GaATZVV3Ez7aQE7FGJJ4DHWXVFR",
+        "options": {}
+      },
+      "id": "upload-csv",
+      "name": "Upload CSV to eob-results",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2650,
+        400
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "fileId": "={{ $('Extract Process Data').first().json.driveFileId }}",
+        "updateFields": {
+          "name": "=Processed_{{ $('Extract Process Data').first().json.originalFilename }}",
+          "parentId": "140_11GaATZVV3Ez7aQE7FGJJ4DHWXVFR"
+        }
+      },
+      "id": "move-rename-pdf",
+      "name": "Move & Rename PDF",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2850,
+        500
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare complete results payload to send back to upload service\nconst processData = $('Extract Process Data').first().json;\nconst costData = $('Calculate Total Cost & Time').first().json;\nconst jsonUpload = $('Upload JSON to eob-results').first().json;\nconst csvUpload = $('Upload CSV to eob-results').first().json;\nconst pdfMove = $('Move & Rename PDF').first().json;\nconst jsonData = $('Prepare JSON').first().json;\n\nreturn [{\n  json: {\n    processId: processData.processId,\n    status: 'Processed',\n    jsonDriveUrl: jsonUpload.webViewLink || jsonUpload.webContentLink,\n    csvDriveUrl: csvUpload.webViewLink || csvUpload.webContentLink,\n    jsonDriveId: jsonUpload.id,\n    csvDriveId: csvUpload.id,\n    processedPdfDriveId: pdfMove.id,\n    processingTimeSeconds: costData.processingTimeSeconds,\n    documentAiCost: costData.documentAiCost,\n    openAiCost: costData.openAiCost,\n    totalCost: costData.totalCost,\n    totalRecords: jsonData.totalRecords,\n    noOfPages: costData.pages\n  }\n}];"
+      },
+      "id": "prepare-results",
+      "name": "Prepare Results Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send results to database (FIXED)\nconst results = $('Prepare Results Payload').first().json;\n\nconsole.log('Sending results for process_id:', results.processId);\n\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `http://127.0.0.1:3000/api/documents/${results.processId}/n8n-results`,\n    json: true,\n    body: results\n  });\n  \n  console.log('Results sent successfully');\n  \n  return [{\n    json: {\n      status: 'success',\n      message: 'Results sent to upload service',\n      processId: results.processId,\n      response: response\n    }\n  }];\n} catch (error) {\n  console.error('Failed to send results:', error.message);\n  \n  return [{\n    json: {\n      status: 'error',\n      message: 'Failed to send results',\n      processId: results.processId,\n      error: error.message\n    }\n  }];\n}"
+      },
+      "id": "send-results",
+      "name": "Send Results to Upload Service",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3250,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Process Data": {
+      "main": [
+        [
+          {
+            "node": "Get Model Pricing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Document AI Cost Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Pricing": {
+      "main": [
+        [
+          {
+            "node": "Wait for Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Document AI Cost Config": {
+      "main": [
+        [
+          {
+            "node": "Wait for Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "Download PDF from Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF from Drive": {
+      "main": [
+        [
+          {
+            "node": "Execute Python - Document AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Python - Document AI": {
+      "main": [
+        [
+          {
+            "node": "Parse Python Output",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Document AI Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Python Output": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Extract EOB Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Extract EOB Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare JSON",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate OpenAI Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Document AI Cost": {
+      "main": [
+        [
+          {
+            "node": "Calculate Total Cost & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate OpenAI Cost": {
+      "main": [
+        [
+          {
+            "node": "Calculate Total Cost & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare JSON": {
+      "main": [
+        [
+          {
+            "node": "JSON to Binary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare CSV": {
+      "main": [
+        [
+          {
+            "node": "CSV to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON to Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload JSON to eob-results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSV to Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload CSV to eob-results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload JSON to eob-results": {
+      "main": [
+        [
+          {
+            "node": "Move & Rename PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload CSV to eob-results": {
+      "main": [
+        [
+          {
+            "node": "Move & Rename PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move & Rename PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare Results Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Results Payload": {
+      "main": [
+        [
+          {
+            "node": "Send Results to Upload Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-07T00:00:00.000Z",
+  "versionId": "1"
+}

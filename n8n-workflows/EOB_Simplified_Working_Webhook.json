@@ -1,0 +1,223 @@
+{
+  "name": "EOB_Simplified_Working_Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eob-simple",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "eob-simple"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate webhook data\nconst body = $input.first().json.body || $input.first().json;\n\nconst processId = body.processId || 999;\nconst modelId = body.modelId || 2;\nconst filename = body.filename || 'test.pdf';\nconst originalFilename = body.originalFilename || 'test.pdf';\n\nconsole.log('Processing:', { processId, modelId, filename });\n\nreturn [{\n  json: {\n    processId: processId,\n    modelId: modelId,\n    filename: filename,\n    originalFilename: originalFilename,\n    driveFileId: body.driveFileId || 'test-drive-id',\n    userid: body.userid || 1,\n    clientId: body.clientId || 1,\n    sessionId: body.sessionId || 'test-session',\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "extract-data",
+      "name": "1. Extract Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch model pricing from API\nconst items = $input.all();\nconst processData = items[0].json;\nconst modelId = processData.modelId || 2;\n\nconsole.log('Fetching pricing for model:', modelId);\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `http://127.0.0.1:3000/api/admin/openai-models/${modelId}/pricing`,\n  json: true\n});\n\nconsole.log('Model pricing fetched:', response.data.model_name);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "get-pricing",
+      "name": "2. Get Model Pricing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch Document AI cost config\nconst items = $input.all();\n\nconsole.log('Fetching DocAI cost config');\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'http://127.0.0.1:3000/api/admin/config/docai_cost_per_page',\n  json: true\n});\n\nconsole.log('DocAI cost:', response.data.value);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "get-docai-cost",
+      "name": "3. Get DocAI Cost",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate Document AI processing\nconst processData = $('1. Extract Process Data').first().json;\nconst docAiConfig = $('3. Get DocAI Cost').first().json.data;\n\n// Simulate a 10-page document\nconst pages = 10;\nconst costPerPage = parseFloat(docAiConfig.value);\nconst documentAiCost = pages * costPerPage;\n\nconsole.log(`Document AI: ${pages} pages × $${costPerPage} = $${documentAiCost}`);\n\n// Simulate extracted text\nconst mockExtractedData = {\n  pages: pages,\n  text: 'Sample EOB document text extracted by Document AI...',\n  tables: [\n    { page: 1, data: 'Patient info table' },\n    { page: 2, data: 'Claims table' }\n  ]\n};\n\nreturn [{\n  json: {\n    documentAiCost: parseFloat(documentAiCost.toFixed(4)),\n    pages: pages,\n    costPerPage: costPerPage,\n    extractedData: mockExtractedData\n  }\n}];"
+      },
+      "id": "simulate-docai",
+      "name": "4. Simulate Document AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate OpenAI extraction with cost calculation\nconst modelPricing = $('2. Get Model Pricing').first().json.data;\nconst docAiData = $('4. Simulate Document AI').first().json;\n\n// Simulate token usage (realistic for a 10-page EOB)\nconst inputTokens = 2500;  // Document text sent to OpenAI\nconst outputTokens = 1500; // Structured data returned\n\nconst inputCostPer1k = parseFloat(modelPricing.input_cost_per_1k);\nconst outputCostPer1k = parseFloat(modelPricing.output_cost_per_1k);\n\nconst openAiCost = (inputTokens / 1000 * inputCostPer1k) + (outputTokens / 1000 * outputCostPer1k);\n\nconsole.log(`OpenAI: ${inputTokens} in + ${outputTokens} out = $${openAiCost.toFixed(4)}`);\nconsole.log(`Model: ${modelPricing.model_name} (${modelPricing.model_code})`);\n\n// Simulate extracted EOB data\nconst mockEobData = {\n  data: [\n    {\n      Original_page_no: \"1\",\n      EOB_page_no: \"1\",\n      patient_acct: \"12345-67890\",\n      Patient_ID: \"12345\",\n      Claim_ID: \"67890\",\n      Patient_Name: \"DOE, JOHN\",\n      First_Name: \"JOHN\",\n      Last_Name: \"DOE\",\n      Total_Charges: \"1500.00\",\n      Plan_Paid: \"1200.00\",\n      Patient_Responsibility: \"300.00\",\n      Confidence_Score: 95\n    },\n    {\n      Original_page_no: \"2\",\n      EOB_page_no: \"2\",\n      patient_acct: \"12345-67891\",\n      Patient_ID: \"12345\",\n      Claim_ID: \"67891\",\n      Patient_Name: \"DOE, JOHN\",\n      First_Name: \"JOHN\",\n      Last_Name: \"DOE\",\n      Total_Charges: \"800.00\",\n      Plan_Paid: \"650.00\",\n      Patient_Responsibility: \"150.00\",\n      Confidence_Score: 92\n    }\n  ],\n  summary: {\n    total_records: 2,\n    avg_confidence: 93.5\n  }\n};\n\nreturn [{\n  json: {\n    openAiCost: parseFloat(openAiCost.toFixed(4)),\n    inputTokens: inputTokens,\n    outputTokens: outputTokens,\n    totalTokens: inputTokens + outputTokens,\n    modelName: modelPricing.model_name,\n    modelCode: modelPricing.model_code,\n    extractedData: mockEobData\n  }\n}];"
+      },
+      "id": "simulate-openai",
+      "name": "5. Simulate OpenAI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate total cost and processing time\nconst processData = $('1. Extract Process Data').first().json;\nconst docAiCost = $('4. Simulate Document AI').first().json;\nconst openAiCost = $('5. Simulate OpenAI').first().json;\n\nconst startTime = new Date(processData.startTime);\nconst endTime = new Date();\nconst processingTimeMs = endTime - startTime;\nconst processingTimeSeconds = Math.round(processingTimeMs / 1000);\n\nconst totalCost = parseFloat((docAiCost.documentAiCost + openAiCost.openAiCost).toFixed(4));\n\nconsole.log('=================================');\nconsole.log(`Total Cost: $${totalCost}`);\nconsole.log(`  - Document AI: $${docAiCost.documentAiCost}`);\nconsole.log(`  - OpenAI: $${openAiCost.openAiCost}`);\nconsole.log(`Processing Time: ${processingTimeSeconds} seconds`);\nconsole.log(`Pages: ${docAiCost.pages}`);\nconsole.log(`Tokens: ${openAiCost.totalTokens}`);\nconsole.log(`Model: ${openAiCost.modelName}`);\nconsole.log('=================================');\n\nreturn [{\n  json: {\n    processId: processData.processId,\n    totalCost: totalCost,\n    documentAiCost: docAiCost.documentAiCost,\n    openAiCost: openAiCost.openAiCost,\n    processingTimeSeconds: processingTimeSeconds,\n    pages: docAiCost.pages,\n    inputTokens: openAiCost.inputTokens,\n    outputTokens: openAiCost.outputTokens,\n    totalTokens: openAiCost.totalTokens,\n    modelUsed: openAiCost.modelName,\n    modelCode: openAiCost.modelCode,\n    totalRecords: openAiCost.extractedData.data.length\n  }\n}];"
+      },
+      "id": "calc-total-cost",
+      "name": "6. Calculate Total Cost",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare results payload to send back to upload service\nconst processData = $('1. Extract Process Data').first().json;\nconst costData = $('6. Calculate Total Cost').first().json;\nconst openAiData = $('5. Simulate OpenAI').first().json;\n\nconst results = {\n  processId: processData.processId,\n  status: 'Processed',\n  jsonDriveUrl: 'https://drive.google.com/simulated/json',\n  csvDriveUrl: 'https://drive.google.com/simulated/csv',\n  jsonDriveId: 'simulated-json-id',\n  csvDriveId: 'simulated-csv-id',\n  processedPdfDriveId: 'simulated-pdf-id',\n  processingTimeSeconds: costData.processingTimeSeconds,\n  documentAiCost: costData.documentAiCost,\n  openAiCost: costData.openAiCost,\n  totalCost: costData.totalCost,\n  totalRecords: costData.totalRecords,\n  noOfPages: costData.pages,\n  errorMessage: null\n};\n\nconsole.log('Prepared results:', results);\n\nreturn [{\n  json: results\n}];"
+      },
+      "id": "prepare-results",
+      "name": "7. Prepare Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send results back to upload service database\nconst results = $('7. Prepare Results').first().json;\n\nconsole.log('Sending results to upload service for process_id:', results.processId);\n\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `http://127.0.0.1:3000/api/documents/${results.processId}/n8n-results`,\n    json: true,\n    body: results\n  });\n  \n  console.log('✓ Results sent successfully:', response);\n  \n  return [{\n    json: {\n      status: 'success',\n      message: 'Results sent to upload service',\n      processId: results.processId,\n      response: response\n    }\n  }];\n} catch (error) {\n  console.error('✗ Failed to send results:', error.message);\n  \n  return [{\n    json: {\n      status: 'error',\n      message: 'Failed to send results',\n      processId: results.processId,\n      error: error.message\n    }\n  }];\n}"
+      },
+      "id": "send-results",
+      "name": "8. Send Results to DB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final summary\nconst results = $('7. Prepare Results').first().json;\nconst sendStatus = $('8. Send Results to DB').first().json;\n\nconst summary = {\n  workflow: 'EOB Simplified Working Webhook',\n  processId: results.processId,\n  status: sendStatus.status,\n  costs: {\n    documentAi: results.documentAiCost,\n    openAi: results.openAiCost,\n    total: results.totalCost\n  },\n  processing: {\n    pages: results.noOfPages,\n    records: results.totalRecords,\n    timeSeconds: results.processingTimeSeconds\n  },\n  databaseUpdated: sendStatus.status === 'success'\n};\n\nconsole.log('=================================');\nconsole.log('WORKFLOW COMPLETE!');\nconsole.log('=================================');\nconsole.log(JSON.stringify(summary, null, 2));\nconsole.log('=================================');\n\nreturn [{\n  json: summary\n}];"
+      },
+      "id": "final-summary",
+      "name": "9. Final Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "1. Extract Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Extract Process Data": {
+      "main": [
+        [
+          {
+            "node": "2. Get Model Pricing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "3. Get DocAI Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Get Model Pricing": {
+      "main": [
+        [
+          {
+            "node": "4. Simulate Document AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Get DocAI Cost": {
+      "main": [
+        [
+          {
+            "node": "4. Simulate Document AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Simulate Document AI": {
+      "main": [
+        [
+          {
+            "node": "5. Simulate OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Simulate OpenAI": {
+      "main": [
+        [
+          {
+            "node": "6. Calculate Total Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Calculate Total Cost": {
+      "main": [
+        [
+          {
+            "node": "7. Prepare Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Prepare Results": {
+      "main": [
+        [
+          {
+            "node": "8. Send Results to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Send Results to DB": {
+      "main": [
+        [
+          {
+            "node": "9. Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-07T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(n8n:*)",
+      "Bash(git:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(echo:*)",
+      "Bash(cd:*)",
+      "Bash(pwd:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "WebFetch",
+      "Glob",
+      "Grep",
+      "Bash(git clone:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Claude Code auto-permissions configuration\n\n- Add .claude/settings.local.json with pre-approved tool permissions\n- Allows common operations without permission prompts:\n  - All npm, node, npx commands\n  - Git operations\n  - File read/write/edit\n  - n8n CLI access\n  - Python/pip commands\n  - Docker/make commands\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Skill(superpowers:brainstorming)"
+    ]
+  }
+}

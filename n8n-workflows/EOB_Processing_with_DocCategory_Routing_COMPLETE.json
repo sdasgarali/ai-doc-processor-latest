@@ -1,0 +1,128 @@
+{
+  "name": "EOB Processing with Document Category Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eob-process"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 380],
+      "webhookId": "fb783dbb-0096-4ade-a6c6-4f7012b9e734"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $input.first().json.body;\nreturn [{\n  json: {\n    processId: webhookData.processId,\n    filename: webhookData.filename,\n    originalFilename: webhookData.originalFilename,\n    driveFileId: webhookData.driveFileId,\n    userid: webhookData.userid,\n    clientId: webhookData.clientId,\n    sessionId: webhookData.sessionId,\n    modelId: webhookData.modelId || 2,\n    docCategory: webhookData.docCategory,\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "extract-process-data",
+      "name": "Extract Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 380]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "EOB"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Facesheet"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "3",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "switch-doc-category",
+      "name": "Route by Document Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json;\nconsole.log('Sending results to upload service:', results.processId);\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `http://127.0.0.1:3000/api/documents/${results.processId}/n8n-results`,\n    json: true,\n    body: {\n      processId: results.processId,\n      status: results.status,\n      processingTimeSeconds: results.processingTimeSeconds,\n      documentAiCost: results.documentAiCost,\n      openAiCost: results.openAiCost,\n      totalCost: results.totalCost,\n      totalRecords: results.totalRecords,\n      noOfPages: results.noOfPages\n    }\n  });\n  console.log('Results sent successfully');\n  return [{ json: { status: 'success', response: response } }];\n} catch (error) {\n  console.error('Failed to send results:', error.message);\n  return [{ json: { status: 'error', error: error.message } }];\n}"
+      },
+      "id": "send-results",
+      "name": "Send Results to Upload Service",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 380]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Extract Process Data", "type": "main", "index": 0 }]]
+    },
+    "Extract Process Data": {
+      "main": [[{ "node": "Route by Document Category", "type": "main", "index": 0 }]]
+    },
+    "Route by Document Category": {
+      "main": [
+        [],
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "new-version-id",
+  "meta": {
+    "instanceId": "a839365551ba2f9c600cf76bdedca7e00a3fcbe564410c8e45e7ede24e6084de"
+  },
+  "id": "new-workflow-id",
+  "tags": []
+}

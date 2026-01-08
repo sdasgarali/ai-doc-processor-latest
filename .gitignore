@@ -144,3 +144,32 @@ audit_answers.txt
 
 # Governance compliance reports
 governance-controller/compliance_report.md
+
+# ===========================================
+# Node.js
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.node_repl_history
+
+# ===========================================
+# Uploads & Generated Files
+# ===========================================
+uploads/
+invoices/
+results/
+*.pdf
+
+# ===========================================
+# Test files (temporary)
+# ===========================================
+test-*.txt
+
+# ===========================================
+# Secrets & Credentials
+# ===========================================
+config/eob-extraction-system-*.json
+GOOGLE_DRIVE_SETUP.md

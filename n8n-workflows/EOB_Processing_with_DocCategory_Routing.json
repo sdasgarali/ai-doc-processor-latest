@@ -1,0 +1,436 @@
+{
+  "name": "EOB Processing with Document Category Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eob-process",
+        "options": {}
+      },
+      "id": "810297af-a61a-4886-b2c9-6fc18fcda826",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 380],
+      "webhookId": "fb783dbb-0096-4ade-a6c6-4f7012b9e734"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract webhook data\nconst webhookData = $input.first().json.body;\n\nreturn [{\n  json: {\n    processId: webhookData.processId,\n    filename: webhookData.filename,\n    originalFilename: webhookData.originalFilename,\n    driveFileId: webhookData.driveFileId,\n    userid: webhookData.userid,\n    clientId: webhookData.clientId,\n    sessionId: webhookData.sessionId,\n    modelId: webhookData.modelId || 2,\n    docCategory: webhookData.docCategory,\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "93f5bcaa-6b4a-42e6-a316-e95441699a9d",
+      "name": "Extract Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 380]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EOB"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Facesheet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.docCategory }}",
+                    "rightValue": "3",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "switch-doc-category",
+      "name": "Route by Document Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch model pricing from API\nconst items = $input.all();\nconst processData = items[0].json;\nconst modelId = processData.modelId || 2;\n\nconsole.log('Fetching pricing for model:', modelId);\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `http://127.0.0.1:3000/api/admin/openai-models/${modelId}/pricing`,\n  json: true\n});\n\nconsole.log('Model pricing fetched:', response.data.model_name);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "model-pricing-eob",
+      "name": "Get Model Pricing - EOB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch model pricing from API\nconst items = $input.all();\nconst processData = items[0].json;\nconst modelId = processData.modelId || 2;\n\nconsole.log('Fetching pricing for model:', modelId);\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `http://127.0.0.1:3000/api/admin/openai-models/${modelId}/pricing`,\n  json: true\n});\n\nconsole.log('Model pricing fetched:', response.data.model_name);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "model-pricing-facesheet",
+      "name": "Get Model Pricing - Facesheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch model pricing from API\nconst items = $input.all();\nconst processData = items[0].json;\nconst modelId = processData.modelId || 2;\n\nconsole.log('Fetching pricing for model:', modelId);\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `http://127.0.0.1:3000/api/admin/openai-models/${modelId}/pricing`,\n  json: true\n});\n\nconsole.log('Model pricing fetched:', response.data.model_name);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "model-pricing-invoice",
+      "name": "Get Model Pricing - Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 580]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch DocAI cost config\nconst items = $input.all();\n\nconsole.log('Fetching DocAI cost config');\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'http://127.0.0.1:3000/api/admin/config/docai_cost_per_page',\n  json: true\n});\n\nconsole.log('DocAI cost:', response.data.value);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "docai-cost-eob",
+      "name": "Get DocAI Cost - EOB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch DocAI cost config\nconst items = $input.all();\n\nconsole.log('Fetching DocAI cost config');\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'http://127.0.0.1:3000/api/admin/config/docai_cost_per_page',\n  json: true\n});\n\nconsole.log('DocAI cost:', response.data.value);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "docai-cost-facesheet",
+      "name": "Get DocAI Cost - Facesheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch DocAI cost config\nconst items = $input.all();\n\nconsole.log('Fetching DocAI cost config');\n\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'http://127.0.0.1:3000/api/admin/config/docai_cost_per_page',\n  json: true\n});\n\nconsole.log('DocAI cost:', response.data.value);\n\nreturn items.map(item => ({\n  json: response\n}));"
+      },
+      "id": "docai-cost-invoice",
+      "name": "Get DocAI Cost - Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 580]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait for file to be available in Google Drive\nawait new Promise(resolve => setTimeout(resolve, 2000));\n\nconst processData = $('Extract Process Data').first().json;\n\nconsole.log('Drive file ready for:', processData.filename);\n\nreturn [{\n  json: {\n    ...processData,\n    driveFileReady: true\n  }\n}];"
+      },
+      "id": "wait-drive-eob",
+      "name": "Wait for Drive - EOB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait for file to be available in Google Drive\nawait new Promise(resolve => setTimeout(resolve, 2000));\n\nconst processData = $('Extract Process Data').first().json;\n\nconsole.log('Drive file ready for:', processData.filename);\n\nreturn [{\n  json: {\n    ...processData,\n    driveFileReady: true\n  }\n}];"
+      },
+      "id": "wait-drive-facesheet",
+      "name": "Wait for Drive - Facesheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait for file to be available in Google Drive\nawait new Promise(resolve => setTimeout(resolve, 2000));\n\nconst processData = $('Extract Process Data').first().json;\n\nconsole.log('Drive file ready for:', processData.filename);\n\nreturn [{\n  json: {\n    ...processData,\n    driveFileReady: true\n  }\n}];"
+      },
+      "id": "wait-drive-invoice",
+      "name": "Wait for Drive - Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 580]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $('Extract Process Data').first().json.driveFileId }}",
+        "options": {}
+      },
+      "id": "download-pdf-eob",
+      "name": "Download PDF - EOB",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1560, 180],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "i7A3g0R8hNGHooNA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $('Extract Process Data').first().json.driveFileId }}",
+        "options": {}
+      },
+      "id": "download-pdf-facesheet",
+      "name": "Download PDF - Facesheet",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1560, 380],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "i7A3g0R8hNGHooNA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $('Extract Process Data').first().json.driveFileId }}",
+        "options": {}
+      },
+      "id": "download-pdf-invoice",
+      "name": "Download PDF - Invoice",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1560, 580],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "i7A3g0R8hNGHooNA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=python \"C:\\Automation\\AI Agents\\GCloud Document AI\\Eob_process_n8n\\eob_process_with_DocAI_n8n_without_watching_v6.py\" \"H:/My Drive/AAA AI-Training/Document Processing/EOB-Extractor/eob-source/{{ $('Extract Process Data').first().json.filename }}\""
+      },
+      "id": "execute-python-eob",
+      "name": "Execute Python - EOB",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1780, 180]
+    },
+    {
+      "parameters": {
+        "command": "=python \"C:\\Automation\\AI Agents\\GCloud Document AI\\Eob_process_n8n\\eob_process_with_DocAI_n8n_without_watching_v6.py\" \"H:/My Drive/AAA AI-Training/Document Processing/EOB-Extractor/eob-source/{{ $('Extract Process Data').first().json.filename }}\""
+      },
+      "id": "execute-python-facesheet",
+      "name": "Execute Python - Facesheet",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1780, 380]
+    },
+    {
+      "parameters": {
+        "command": "=python \"C:\\Automation\\AI Agents\\GCloud Document AI\\Eob_process_n8n\\eob_process_with_DocAI_n8n_without_watching_v6.py\" \"H:/My Drive/AAA AI-Training/Document Processing/EOB-Extractor/eob-source/{{ $('Extract Process Data').first().json.filename }}\""
+      },
+      "id": "execute-python-invoice",
+      "name": "Execute Python - Invoice",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1780, 580]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Python script output to extract JSON data\nconst pythonResult = $input.first().json;\nconst output = pythonResult.stdout || '';\nconst stderr = pythonResult.stderr || '';\n\nconsole.log('=== PYTHON OUTPUT DEBUG ===');\nconsole.log('stdout length:', output.length);\nconsole.log('stderr:', stderr);\n\nconst startMarker = '===JSON_CONTENT_START===';\nconst endMarker = '===JSON_CONTENT_END===';\n\nconst startIdx = output.indexOf(startMarker);\nconst endIdx = output.indexOf(endMarker);\n\nif (startIdx === -1 || endIdx === -1) {\n  console.error('Full stdout:', output);\n  console.error('Full stderr:', stderr);\n  throw new Error(`Could not find JSON markers in Python output. Start: ${startIdx}, End: ${endIdx}`);\n}\n\nconst jsonStr = output.substring(startIdx + startMarker.length, endIdx).trim();\nconst data = JSON.parse(jsonStr);\n\nreturn [{\n  json: {\n    data: data,\n    pages: data.pages || data.total_pages || 0,\n    rawDataPath: data.raw_data_file || ''\n  }\n}];"
+      },
+      "id": "parse-python-eob",
+      "name": "Parse Python Output - EOB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Python script output to extract JSON data\nconst pythonResult = $input.first().json;\nconst output = pythonResult.stdout || '';\nconst stderr = pythonResult.stderr || '';\n\nconsole.log('=== PYTHON OUTPUT DEBUG ===');\nconsole.log('stdout length:', output.length);\nconsole.log('stderr:', stderr);\n\nconst startMarker = '===JSON_CONTENT_START===';\nconst endMarker = '===JSON_CONTENT_END===';\n\nconst startIdx = output.indexOf(startMarker);\nconst endIdx = output.indexOf(endMarker);\n\nif (startIdx === -1 || endIdx === -1) {\n  console.error('Full stdout:', output);\n  console.error('Full stderr:', stderr);\n  throw new Error(`Could not find JSON markers in Python output. Start: ${startIdx}, End: ${endIdx}`);\n}\n\nconst jsonStr = output.substring(startIdx + startMarker.length, endIdx).trim();\nconst data = JSON.parse(jsonStr);\n\nreturn [{\n  json: {\n    data: data,\n    pages: data.pages || data.total_pages || 0,\n    rawDataPath: data.raw_data_file || ''\n  }\n}];"
+      },
+      "id": "parse-python-facesheet",
+      "name": "Parse Python Output - Facesheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Python script output to extract JSON data\nconst pythonResult = $input.first().json;\nconst output = pythonResult.stdout || '';\nconst stderr = pythonResult.stderr || '';\n\nconsole.log('=== PYTHON OUTPUT DEBUG ===');\nconsole.log('stdout length:', output.length);\nconsole.log('stderr:', stderr);\n\nconst startMarker = '===JSON_CONTENT_START===';\nconst endMarker = '===JSON_CONTENT_END===';\n\nconst startIdx = output.indexOf(startMarker);\nconst endIdx = output.indexOf(endMarker);\n\nif (startIdx === -1 || endIdx === -1) {\n  console.error('Full stdout:', output);\n  console.error('Full stderr:', stderr);\n  throw new Error(`Could not find JSON markers in Python output. Start: ${startIdx}, End: ${endIdx}`);\n}\n\nconst jsonStr = output.substring(startIdx + startMarker.length, endIdx).trim();\nconst data = JSON.parse(jsonStr);\n\nreturn [{\n  json: {\n    data: data,\n    pages: data.pages || data.total_pages || 0,\n    rawDataPath: data.raw_data_file || ''\n  }\n}];"
+      },
+      "id": "parse-python-invoice",
+      "name": "Parse Python Output - Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 580]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a document EOB data-extraction expert and a Quality Analyst. Your job is to return accurate structured, machine-readable data with quality controls and zero hallucinations with 100% confidence.",
+              "role": "system"
+            },
+            {
+              "content": "Extract ALL EOB (Explanation of Benefits) records from the input data.\nINPUT: {{ $json.data.text }}\n\nFor EACH patient/claim found, extract all EOB fields including patient_acct, Patient_ID, Claim_ID, Patient Name, member_number, service_date, amounts, CPT codes, adjustments, etc.\n\nReturn ONLY valid JSON with 'data' array.",
+              "role": "user"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2220, 180],
+      "id": "openai-extract-eob",
+      "name": "OpenAI Extract - EOB",
+      "credentials": {
+        "openAiApi": {
+          "id": "GK7XmbpGPTdHpoPW",
+          "name": "EOB-Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a medical document extraction expert. Extract accurate patient demographic and medical information from facesheet documents.",
+              "role": "system"
+            },
+            {
+              "content": "Extract ALL patient demographic and medical information from this facesheet document.\nINPUT: {{ $json.data.text }}\n\nFor EACH patient record, extract:\n- patient_name, first_name, last_name\n- date_of_birth (MM/DD/YYYY)\n- medical_record_number, account_number\n- admission_date, discharge_date (MM/DD/YYYY)\n- insurance_company, insurance_id\n- diagnosis_codes, procedure_codes\n- attending_physician, facility_name\n- patient_address, phone_number\n- emergency_contact, emergency_phone\n- allergies, medications\n- Confidence_Score (0-100)\n\nReturn ONLY valid JSON with 'data' array.",
+              "role": "user"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2220, 380],
+      "id": "openai-extract-facesheet",
+      "name": "OpenAI Extract - Facesheet",
+      "credentials": {
+        "openAiApi": {
+          "id": "GK7XmbpGPTdHpoPW",
+          "name": "EOB-Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an invoice data extraction expert. Extract accurate billing and line item information from invoices.",
+              "role": "system"
+            },
+            {
+              "content": "Extract ALL invoice information from this document.\nINPUT: {{ $json.data.text }}\n\nFor EACH invoice, extract:\n- invoice_number, invoice_date (MM/DD/YYYY)\n- vendor_name, vendor_address, vendor_tax_id\n- customer_name, customer_address, billing_address\n- po_number, due_date (MM/DD/YYYY)\n- line_items (array of: item_description, quantity, unit_price, line_total)\n- subtotal, tax_amount, tax_rate, shipping_cost\n- total_amount, amount_due\n- payment_terms, payment_method\n- currency\n- notes\n- Confidence_Score (0-100)\n\nReturn ONLY valid JSON with 'data' array containing invoice and line items.",
+              "role": "user"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2220, 580],
+      "id": "openai-extract-invoice",
+      "name": "OpenAI Extract - Invoice",
+      "credentials": {
+        "openAiApi": {
+          "id": "GK7XmbpGPTdHpoPW",
+          "name": "EOB-Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate costs and send results\nconst processData = $('Extract Process Data').first().json;\nconst pythonOutput = $input.first().json;\nconst aiResponse = $input.item(0).json;\n\n// Get pricing configs\nlet modelPricing, docAiConfig;\ntry {\n  modelPricing = $('Get Model Pricing - EOB').first().json.data || $('Get Model Pricing - Facesheet').first().json.data || $('Get Model Pricing - Invoice').first().json.data;\n  docAiConfig = $('Get DocAI Cost - EOB').first().json.data || $('Get DocAI Cost - Facesheet').first().json.data || $('Get DocAI Cost - Invoice').first().json.data;\n} catch(e) {\n  console.log('Could not fetch pricing, using defaults');\n  modelPricing = { input_cost_per_1k: 0.00015, output_cost_per_1k: 0.0006, model_name: 'gpt-4o-mini' };\n  docAiConfig = { value: 0.015 };\n}\n\nconst pages = pythonOutput.pages || 0;\nconst documentAiCost = pages * parseFloat(docAiConfig.value || 0.015);\n\nconst inputTokens = aiResponse.usage?.prompt_tokens || 0;\nconst outputTokens = aiResponse.usage?.completion_tokens || 0;\nconst inputCostPer1k = parseFloat(modelPricing.input_cost_per_1k || 0.00015);\nconst outputCostPer1k = parseFloat(modelPricing.output_cost_per_1k || 0.0006);\nconst openAiCost = (inputTokens / 1000 * inputCostPer1k) + (outputTokens / 1000 * outputCostPer1k);\n\nconst startTime = new Date(processData.startTime);\nconst endTime = new Date();\nconst processingTimeSeconds = Math.round((endTime - startTime) / 1000);\nconst totalCost = parseFloat((documentAiCost + openAiCost).toFixed(4));\n\n// Extract results\nlet extractedData;\nif (aiResponse.message) {\n  const content = aiResponse.message.content || aiResponse.message;\n  extractedData = typeof content === 'string' ? JSON.parse(content) : content;\n} else if (aiResponse.choices && aiResponse.choices[0]) {\n  extractedData = JSON.parse(aiResponse.choices[0].message.content);\n} else {\n  extractedData = aiResponse.data || aiResponse;\n}\n\nconst totalRecords = (extractedData.data || extractedData).length || 0;\n\n// Prepare results payload\nconst payload = {\n  processId: processData.processId,\n  status: 'Processed',\n  processingTimeSeconds: processingTimeSeconds,\n  documentAiCost: parseFloat(documentAiCost.toFixed(4)),\n  openAiCost: parseFloat(openAiCost.toFixed(4)),\n  totalCost: totalCost,\n  totalRecords: totalRecords,\n  noOfPages: pages,\n  extractedData: extractedData.data || extractedData\n};\n\nconsole.log('Processing complete:', payload);\n\nreturn [{ json: payload }];"
+      },
+      "id": "finalize-results",
+      "name": "Finalize & Send Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send results to upload service\nconst results = $input.first().json;\n\nconsole.log('Sending results to upload service:', results.processId);\n\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `http://127.0.0.1:3000/api/documents/${results.processId}/n8n-results`,\n    json: true,\n
