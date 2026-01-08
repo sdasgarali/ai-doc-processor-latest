@@ -58,6 +58,7 @@ const DocumentDetails = () => {
   const [showPdf, setShowPdf] = useState(true);
   const [jsonContent, setJsonContent] = useState('');
   const [jsonTab, setJsonTab] = useState(0); // 0 = formatted, 1 = raw
+  const [editingCell, setEditingCell] = useState(null); // Track which cell is being edited {row, col}
 
   useEffect(() => {
     fetchDocumentDetails();
@@ -249,32 +250,31 @@ const DocumentDetails = () => {
     }
   };
 
-  // Define fixed column order
+  // Define fixed column order for EOB documents
   const COLUMN_ORDER = [
-    'Original_page_no',
-    'EOB_page_no',
-    'patient_acct',
+    'Page_no',
+    'Patient_acct',
     'Patient_ID',
     'Claim_ID',
     'Patient Name',
     'First_Name',
     'Last Name',
     'member_number',
-    'service_date',
-    'allowed_amount',
-    'interest_amount',
-    'paid_amount',
-    'insurance_co',
-    'billed_amount',
-    'cpt_hcpcs',
-    'adj_co45',
-    'adj_co144',
-    'adj_co253',
-    'check_number',
     'account_number',
-    'patient_responsibility',
+    'check_number',
+    'service_date',
+    'billed_amount',
+    'allowed_amount',
+    'paid_amount',
+    'interest_amount',
+    'adj_co45',
+    'adj_co253',
+    'adj_co144',
+    'cpt_hcpcs',
+    'insurance_co',
     'claim_summary',
     'action_required',
+    'patient_responsibility',
     'reason_code_comments',
     'Confidence_Score'
   ];
@@ -494,8 +494,8 @@ const DocumentDetails = () => {
                 </Box>
               </Box>
 
-              <TableContainer sx={{ maxHeight: 600, overflowY: 'auto' }}>
-                <Table stickyHeader size="small">
+              <TableContainer sx={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'auto' }}>
+                <Table stickyHeader size="small" sx={{ tableLayout: 'auto' }}>
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox" sx={{ bgcolor: 'primary.main', color: 'white' }}>
@@ -509,8 +509,19 @@ const DocumentDetails = () => {
                       </TableCell>
                       <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 'bold' }}>#</TableCell>
                       {getFieldKeys().map((key) => (
-                        <TableCell key={key} sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 'bold', minWidth: 120 }}>
-                          {key.replace(/_/g, ' ').toUpperCase()}
+                        <TableCell
+                          key={key}
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '0.75rem',
+                            py: 1,
+                            px: 1,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {key.replace(/_/g, ' ')}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -544,40 +555,71 @@ const DocumentDetails = () => {
                               />
                             </TableCell>
                             <TableCell>{rowIndex + 1}</TableCell>
-                            {getFieldKeys().map((key) => (
-                              <TableCell key={key} onClick={(e) => e.stopPropagation()}>
-                                {(key === 'Original_page_no' || key === 'EOB_page_no') && row[key] && pdfUrl ? (
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {getFieldKeys().map((key) => {
+                              const isEditing = editingCell?.row === rowIndex && editingCell?.col === key;
+                              return (
+                                <TableCell
+                                  key={key}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isEditing) setEditingCell({ row: rowIndex, col: key });
+                                  }}
+                                  sx={{
+                                    cursor: 'pointer',
+                                    p: 1,
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                    minWidth: key === 'claim_summary' || key === 'reason_code_comments' ? 200 : 80,
+                                    maxWidth: key === 'claim_summary' || key === 'reason_code_comments' ? 300 : 150
+                                  }}
+                                >
+                                  {isEditing ? (
                                     <TextField
+                                      autoFocus
                                       fullWidth
                                       size="small"
                                       value={row[key] || ''}
                                       onChange={(e) => handleCellEdit(rowIndex, key, e.target.value)}
-                                      variant="outlined"
-                                    />
-                                    <Link
-                                      component="button"
-                                      variant="body2"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigateToPdfPage(parseInt(row[key]));
+                                      onBlur={() => setEditingCell(null)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') setEditingCell(null);
+                                        if (e.key === 'Escape') setEditingCell(null);
                                       }}
-                                      sx={{ cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                                    >
-                                      View
-                                    </Link>
-                                  </Box>
-                                ) : (
-                                  <TextField
-                                    fullWidth
-                                    size="small"
-                                    value={row[key] || ''}
-                                    onChange={(e) => handleCellEdit(rowIndex, key, e.target.value)}
-                                    variant="outlined"
-                                  />
-                                )}
-                              </TableCell>
-                            ))}
+                                      variant="outlined"
+                                      sx={{ '& .MuiInputBase-input': { fontSize: '0.8rem', py: 0.5 } }}
+                                    />
+                                  ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontSize: '0.8rem',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          color: row[key] ? 'text.primary' : 'text.disabled'
+                                        }}
+                                        title={row[key] || ''}
+                                      >
+                                        {row[key] || '-'}
+                                      </Typography>
+                                      {key === 'Page_no' && row[key] && pdfUrl && (
+                                        <Link
+                                          component="button"
+                                          variant="caption"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigateToPdfPage(parseInt(row[key]));
+                                          }}
+                                          sx={{ fontSize: '0.7rem', ml: 0.5 }}
+                                        >
+                                          [view]
+                                        </Link>
+                                      )}
+                                    </Box>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
                           </TableRow>
                         );
                       })

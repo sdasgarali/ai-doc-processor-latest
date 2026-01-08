@@ -252,8 +252,8 @@ class DocumentOrchestrator:
             local_csv_path = None
             local_xlsx_path = None
 
-            # Save locally if using local file (for Laravel integration)
-            if request.local_file_path:
+            # Always save files locally (for backend access and as fallback when Drive upload fails)
+            if True:  # Always save locally
                 results_dir = Path(config.folders.results_folder)
                 results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -286,20 +286,9 @@ class DocumentOrchestrator:
                 except Exception as e:
                     logger.warning(f"Failed to create XLSX: {e}")
 
-            # Upload to Google Drive (for non-local files)
+            # Google Drive upload disabled - using local storage only
             json_upload = None
             csv_upload = None
-            if request.drive_file_id:
-                json_upload = self.drive_service.upload_json(
-                    json_output,
-                    json_file_name,
-                    config.google_drive.results_folder_id
-                )
-                csv_upload = self.drive_service.upload_csv(
-                    csv_content,
-                    csv_file_name,
-                    config.google_drive.results_folder_id
-                )
 
             # Step 9: Prepare result
             result = ProcessResult(

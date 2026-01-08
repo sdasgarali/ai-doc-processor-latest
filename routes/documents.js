@@ -791,7 +791,7 @@ router.delete('/:processId', verifyToken, checkRole('admin', 'superadmin'), asyn
   }
 });
 
-// Receive results from n8n workflow (no authentication required - called by n8n)
+// Receive results from Python processor (no authentication required - called by Python processor)
 router.post('/:processId/n8n-results', async (req, res) => {
   try {
     const { processId } = req.params;
@@ -801,19 +801,27 @@ router.post('/:processId/n8n-results', async (req, res) => {
       csvDriveUrl,
       jsonDriveId,
       csvDriveId,
-      // processedPdfDriveId, // REMOVED: Column doesn't exist in database
       processingTimeSeconds,
       documentAiCost,
       openAiCost,
       totalCost,
       errorMessage,
       totalRecords,
-      noOfPages
+      noOfPages,
+      // Local file paths from Python processor
+      localJsonPath,
+      localCsvPath,
+      localXlsxPath
     } = req.body;
 
-    console.log(`📥 Received n8n results for process_id: ${processId}, status: ${status}`);
+    console.log(`📥 Received Python processor results for process_id: ${processId}, status: ${status}`);
+    console.log(`   Local paths - JSON: ${localJsonPath}, CSV: ${localCsvPath}, XLSX: ${localXlsxPath}`);
 
-    // Update database with results from n8n
+    // Use local paths as fallback when Drive URLs are not available
+    const effectiveJsonPath = jsonDriveUrl || localJsonPath || null;
+    const effectiveCsvPath = csvDriveUrl || localCsvPath || null;
+
+    // Update database with results
     await query(
       `UPDATE document_processed
        SET processing_status = ?,
@@ -832,8 +840,8 @@ router.post('/:processId/n8n-results', async (req, res) => {
        WHERE process_id = ?`,
       [
         status,
-        jsonDriveUrl || null,
-        csvDriveUrl || null,
+        effectiveJsonPath,
+        effectiveCsvPath,
         jsonDriveId || null,
         csvDriveId || null,
         processingTimeSeconds || null,
@@ -850,45 +858,63 @@ router.post('/:processId/n8n-results', async (req, res) => {
     console.log(`✓ Updated database for process_id: ${processId}`);
 
     // Populate extracted_data table with results from JSON file
-    if (status === 'Processed' && jsonDriveId && totalRecords > 0) {
+    if (status === 'Processed' && totalRecords > 0) {
       try {
-        console.log(`📥 Downloading and populating extracted_data for process_id: ${processId}`);
+        let jsonData = null;
+        let jsonSource = null;
 
-        const { downloadFromGoogleDrive } = require('../services/googleDrive');
-        const tempPath = path.join(__dirname, '..', 'temp', `${processId}_initial_data.json`);
-
-        // Ensure temp directory exists
-        const tempDir = path.join(__dirname, '..', 'temp');
-        await fs.mkdir(tempDir, { recursive: true });
-
-        // Download JSON file from Google Drive
-        await downloadFromGoogleDrive(jsonDriveId, tempPath);
-        console.log(`✓ Downloaded JSON file for process_id: ${processId}`);
-
-        // Read and parse JSON file
-        const jsonData = await fs.readFile(tempPath, 'utf8');
-        const parsedData = JSON.parse(jsonData);
-        // Handle both 'data' and 'results' keys for compatibility
-        const results = parsedData.data || parsedData.results || [];
-
-        console.log(`📊 Found ${results.length} records to insert`);
-
-        // Insert each record into extracted_data table
-        if (results.length > 0) {
-          for (const record of results) {
-            await query(
-              'INSERT INTO extracted_data (process_id, row_data) VALUES (?, ?)',
-              [processId, JSON.stringify(record)]
-            );
+        // Priority 1: Use local JSON file if available
+        if (localJsonPath) {
+          try {
+            await fs.access(localJsonPath);
+            jsonData = await fs.readFile(localJsonPath, 'utf8');
+            jsonSource = 'local file';
+            console.log(`📂 Reading JSON from local file: ${localJsonPath}`);
+          } catch (localErr) {
+            console.log(`⚠️  Local JSON file not accessible: ${localErr.message}`);
           }
-          console.log(`✓ Inserted ${results.length} records into extracted_data for process_id: ${processId}`);
         }
 
-        // Clean up temp file
-        await fs.unlink(tempPath).catch(() => {});
+        // Priority 2: Download from Google Drive if local file not available
+        if (!jsonData && jsonDriveId) {
+          try {
+            console.log(`📥 Downloading JSON from Google Drive for process_id: ${processId}`);
+            const { downloadFromGoogleDrive } = require('../services/googleDrive');
+            const tempPath = path.join(__dirname, '..', 'temp', `${processId}_initial_data.json`);
+
+            const tempDir = path.join(__dirname, '..', 'temp');
+            await fs.mkdir(tempDir, { recursive: true });
+
+            await downloadFromGoogleDrive(jsonDriveId, tempPath);
+            jsonData = await fs.readFile(tempPath, 'utf8');
+            jsonSource = 'Google Drive';
+
+            await fs.unlink(tempPath).catch(() => {});
+          } catch (driveErr) {
+            console.log(`⚠️  Google Drive download failed: ${driveErr.message}`);
+          }
+        }
+
+        if (jsonData) {
+          const parsedData = JSON.parse(jsonData);
+          const results = parsedData.data || parsedData.results || [];
+
+          console.log(`📊 Found ${results.length} records from ${jsonSource} to insert`);
+
+          if (results.length > 0) {
+            for (const record of results) {
+              await query(
+                'INSERT INTO extracted_data (process_id, row_data) VALUES (?, ?)',
+                [processId, JSON.stringify(record)]
+              );
+            }
+            console.log(`✓ Inserted ${results.length} records into extracted_data for process_id: ${processId}`);
+          }
+        } else {
+          console.log(`⚠️  No JSON data source available for process_id: ${processId}`);
+        }
       } catch (error) {
         console.error(`⚠️  Failed to populate extracted_data for process_id ${processId}:`, error.message);
-        // Don't fail the entire request if this fails - the data can still be loaded from Google Drive
       }
     }
 
