@@ -1,0 +1,32 @@
+# Document AI and PDF Processing
+google-cloud-documentai==2.20.0
+PyPDF2==3.0.1
+
+# Google Drive API
+google-api-python-client==2.111.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.2.0
+
+# AI/LLM APIs
+# Mistral AI (default, more cost-effective)
+# Uses requests library for API calls - no separate package needed
+# OpenAI (alternative)
+openai>=2.14.0
+
+# Web Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+pydantic==2.6.1
+python-multipart==0.0.9
+
+# HTTP Client (used by Mistral API)
+requests==2.31.0
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# File Watching (optional, for auto-processing)
+watchdog==3.0.0
+
+# Excel Support
+openpyxl>=3.1.5
