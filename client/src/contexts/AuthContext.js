@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
@@ -15,12 +15,19 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const isLoggingIn = useRef(false);
 
   useEffect(() => {
     // Set axios defaults
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      verifyToken();
+      // Only verify token on initial load, not after login (login already sets user)
+      if (!isLoggingIn.current) {
+        verifyToken();
+      } else {
+        isLoggingIn.current = false;
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
@@ -40,13 +47,16 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await axios.post('/api/auth/login', { email, password });
-    const { token, user } = response.data;
-    
-    localStorage.setItem('token', token);
-    setToken(token);
-    setUser(user);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
+    const { token: newToken, user: userData } = response.data;
+
+    // Set flag to prevent useEffect from calling verifyToken
+    isLoggingIn.current = true;
+
+    localStorage.setItem('token', newToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    setUser(userData);
+    setToken(newToken);
+
     return response.data;
   };
 
