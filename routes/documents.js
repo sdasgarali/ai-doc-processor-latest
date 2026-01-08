@@ -775,7 +775,10 @@ router.delete('/:processId', verifyToken, checkRole('admin', 'superadmin'), asyn
       await fs.unlink(filePath).catch(() => {});
     }
 
-    // Delete from database
+    // Delete extracted data first (foreign key dependency)
+    await query('DELETE FROM extracted_data WHERE process_id = ?', [processId]);
+
+    // Delete from document_processed table
     await query('DELETE FROM document_processed WHERE process_id = ?', [processId]);
 
     res.json({

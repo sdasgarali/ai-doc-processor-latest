@@ -18,7 +18,13 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Tooltip
+  Tooltip,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   Visibility as ViewIcon,
@@ -28,7 +34,8 @@ import {
   PictureAsPdf as PdfIcon,
   TableChart as CsvIcon,
   Code as JsonIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -49,7 +56,14 @@ const Documents = () => {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
+  // Delete functionality state
+  const [selectedDocs, setSelectedDocs] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
   useEffect(() => {
     fetchDocuments();
   }, [statusFilter, categoryFilter, fromDate, toDate, page]);
@@ -210,11 +224,71 @@ const Documents = () => {
     setPage(1);
   };
 
+  // Selection handlers
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedDocs(filteredDocuments.map(doc => doc.process_id));
+    } else {
+      setSelectedDocs([]);
+    }
+  };
+
+  const handleSelectDoc = (processId) => {
+    setSelectedDocs(prev =>
+      prev.includes(processId)
+        ? prev.filter(id => id !== processId)
+        : [...prev, processId]
+    );
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setDeleting(true);
+      const token = localStorage.getItem('token');
+
+      // Delete each selected document
+      const deletePromises = selectedDocs.map(processId =>
+        axios.delete(`http://localhost:5000/api/documents/${processId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      );
+
+      await Promise.all(deletePromises);
+
+      setSelectedDocs([]);
+      setDeleteDialogOpen(false);
+      fetchDocuments();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError(`Failed to delete documents: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" fontWeight="bold">Documents</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          {isAdmin && selectedDocs.length > 0 && (
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleDeleteClick}
+            >
+              Delete ({selectedDocs.length})
+            </Button>
+          )}
           <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchDocuments}>
             Refresh
           </Button>
@@ -302,6 +376,16 @@ const Documents = () => {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: '#1976d2' }}>
+              {isAdmin && (
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2, width: 50 }}>
+                  <Checkbox
+                    checked={filteredDocuments.length > 0 && selectedDocs.length === filteredDocuments.length}
+                    indeterminate={selectedDocs.length > 0 && selectedDocs.length < filteredDocuments.length}
+                    onChange={handleSelectAll}
+                    sx={{ color: 'white', '&.Mui-checked': { color: 'white' }, '&.MuiCheckbox-indeterminate': { color: 'white' } }}
+                  />
+                </TableCell>
+              )}
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Process ID</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Document Name</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Client</TableCell>
@@ -319,26 +403,35 @@ const Documents = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 5 }}>
+                <TableCell colSpan={isAdmin ? 13 : 12} align="center" sx={{ py: 5 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : filteredDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 5 }}>
+                <TableCell colSpan={isAdmin ? 13 : 12} align="center" sx={{ py: 5 }}>
                   <Typography color="text.secondary">No documents found</Typography>
                 </TableCell>
               </TableRow>
             ) : (
               filteredDocuments.map((doc, index) => (
-                <TableRow 
-                  key={doc.process_id} 
+                <TableRow
+                  key={doc.process_id}
                   hover
-                  sx={{ 
+                  selected={selectedDocs.includes(doc.process_id)}
+                  sx={{
                     '&:nth-of-type(odd)': { bgcolor: 'action.hover' },
                     '&:hover': { bgcolor: 'action.selected' }
                   }}
                 >
+                  {isAdmin && (
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedDocs.includes(doc.process_id)}
+                        onChange={() => handleSelectDoc(doc.process_id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
                       {doc.process_id}
@@ -467,16 +560,44 @@ const Documents = () => {
 
       {totalPages > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination 
-            count={totalPages} 
-            page={page} 
-            onChange={(e, value) => setPage(value)} 
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(e, value) => setPage(value)}
             color="primary"
             showFirstButton
             showLastButton
           />
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete {selectedDocs.length} document{selectedDocs.length > 1 ? 's' : ''}?
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

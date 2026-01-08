@@ -154,9 +154,12 @@ const DocumentDetails = () => {
 
   const navigateToPdfPage = (pageNumber) => {
     if (pdfViewerRef.current && pdfUrl) {
-      const newUrl = `${pdfUrl}#page=${pageNumber}`;
-      pdfViewerRef.current.src = newUrl;
-      setCurrentPage(pageNumber);
+      // Force reload by clearing src first, then setting with page hash
+      pdfViewerRef.current.src = '';
+      setTimeout(() => {
+        pdfViewerRef.current.src = `${pdfUrl}#page=${pageNumber}`;
+        setCurrentPage(pageNumber);
+      }, 50);
     }
   };
 
