@@ -7,17 +7,17 @@ const AdminPanel = () => {
   const location = useLocation();
   
   const tabs = [
-    { label: 'User Management', path: '/admin/users' },
-    { label: 'Client Management', path: '/admin/clients' },
-    { label: 'Doc Category', path: '/admin/doc-categories' },
-    { label: 'Model Management', path: '/admin/model-versions' },
-    { label: 'Field Management', path: '/admin/fields' },
-    { label: 'Permission Management', path: '/admin/permissions' },
-    { label: 'Processing Engine', path: '/admin/processing-config' },
-    { label: 'Pricing Configuration', path: '/admin/pricing' },
-    { label: 'Billing Config', path: '/admin/billing/config' },
-    { label: 'Invoices', path: '/admin/billing/invoices' },
-    { label: 'Mail Logs', path: '/admin/billing/mail-logs' }
+    { label: 'User Management', path: '/app/admin/users' },
+    { label: 'Client Management', path: '/app/admin/clients' },
+    { label: 'Doc Category', path: '/app/admin/doc-categories' },
+    { label: 'Model Management', path: '/app/admin/model-versions' },
+    { label: 'Field Management', path: '/app/admin/fields' },
+    { label: 'Permission Management', path: '/app/admin/permissions' },
+    { label: 'Processing Engine', path: '/app/admin/processing-config' },
+    { label: 'Pricing Configuration', path: '/app/admin/pricing' },
+    { label: 'Billing Config', path: '/app/admin/billing/config' },
+    { label: 'Invoices', path: '/app/admin/billing/invoices' },
+    { label: 'Mail Logs', path: '/app/admin/billing/mail-logs' }
   ];
   
   const currentTab = tabs.findIndex(tab => location.pathname === tab.path);
