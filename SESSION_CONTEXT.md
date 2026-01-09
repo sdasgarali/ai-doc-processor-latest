@@ -25,7 +25,7 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
   - GET /api/admin/processing-config/category/:categoryId - Get category config
   - GET /api/admin/processing-config/effective/:categoryId - Get merged config for processing
   - POST /api/admin/processing-config - Create/update config
-  - POST /api/admin/processing-config/bulk - Bulk update configs
+  - POST /api/admin/processing-config/bulk - Bulk update configs (fixed for NULL handling)
   - POST /api/admin/processing-config/copy-to-category/:categoryId - Copy defaults to category
   - DELETE /api/admin/processing-config/:id - Delete config
 - Added route registration in server.js
@@ -45,8 +45,13 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
 - Added `DynamicConfig` class in `config.py`
 - Added `get_dynamic_config(category_id)` function
 - Added `fetch_api_config()` to get config from backend API
-- Config priority: API config > .env > defaults
+- Config priority: API config > .env file > defaults
 - Modified orchestrator.py to load dynamic config per document category
+
+### Phase 5: Bug Fixes - DONE
+- Fixed MySQL NULL handling in bulk save (unique constraint doesn't work with NULL)
+- Created `scripts/fix-config.js` to clean duplicates and populate from .env
+- Populated default configuration values from python_processor/.env
 
 ## Configuration Keys Supported
 - OCR_PROVIDER (google/mistral)
@@ -63,6 +68,7 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
 - database/processing_config.sql (NEW)
 - routes/processingConfig.js (NEW)
 - client/src/pages/Admin/ProcessingEngineConfig.js (NEW)
+- scripts/fix-config.js (NEW)
 - server.js (MODIFIED - added route)
 - client/src/App.js (MODIFIED - added route)
 - client/src/pages/Admin/AdminPanel.js (MODIFIED - added tab)
@@ -77,11 +83,20 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
 5. If API call fails or value missing, falls back to .env file
 6. .env file values are used as ultimate fallback
 
+## Known Issues Fixed
+- MySQL unique constraint doesn't work with NULL values - fixed by using explicit SELECT before UPDATE/INSERT
+- Duplicate config entries - fixed with cleanup script
+- Empty values after save - fixed by proper NULL handling in bulk save API
+
 ## Testing
 - Access http://localhost:3000/admin/processing-config as admin
 - Configure default settings in "Default Configuration" tab
 - Configure category-specific overrides in "Category-Specific Configuration" tab
 - Process a document to verify config is applied
+
+## Git Commits
+- `0f6baa7` - Add Processing Engine Configuration management
+- `7c3bbe5` - Fix processing config save and populate default values
 
 ## Last Updated
 2026-01-08
