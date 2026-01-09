@@ -28,7 +28,8 @@ import {
   ContentCopy as CopyIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -341,27 +342,38 @@ const ProcessingEngineConfig = () => {
     }
 
     if (type === 'password') {
+      const isSaved = !fieldValue && displayValue;
       return (
-        <TextField
-          fullWidth
-          type={showPasswords[key] ? 'text' : 'password'}
-          label={label}
-          value={fieldValue}
-          onChange={(e) => onChange(key, e.target.value)}
-          placeholder={placeholder || (isCategory ? 'Leave empty to use default' : '')}
-          helperText={description}
-          size="small"
-          InputProps={{
-            endAdornment: (
-              <IconButton
-                size="small"
-                onClick={() => togglePasswordVisibility(key)}
-              >
-                {showPasswords[key] ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              </IconButton>
-            )
-          }}
-        />
+        <Box>
+          <TextField
+            fullWidth
+            type={showPasswords[key] ? 'text' : 'password'}
+            label={label}
+            value={fieldValue}
+            onChange={(e) => onChange(key, e.target.value)}
+            placeholder={placeholder || (isCategory ? 'Leave empty to use default' : 'Enter API key')}
+            helperText={isSaved ? `Saved: ${displayValue} (enter new value to replace)` : description}
+            size="small"
+            InputProps={{
+              endAdornment: (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {isSaved && (
+                    <Tooltip title="API key is saved and encrypted">
+                      <CheckCircleIcon color="success" sx={{ mr: 0.5, fontSize: 20 }} />
+                    </Tooltip>
+                  )}
+                  <IconButton
+                    size="small"
+                    onClick={() => togglePasswordVisibility(key)}
+                  >
+                    {showPasswords[key] ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  </IconButton>
+                </Box>
+              )
+            }}
+            sx={isSaved ? { '& .MuiOutlinedInput-root': { backgroundColor: 'rgba(46, 125, 50, 0.04)' } } : {}}
+          />
+        </Box>
       );
     }
 

@@ -87,6 +87,7 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
 - MySQL unique constraint doesn't work with NULL values - fixed by using explicit SELECT before UPDATE/INSERT
 - Duplicate config entries - fixed with cleanup script
 - Empty values after save - fixed by proper NULL handling in bulk save API
+- API keys "not saved" confusion - API keys ARE saved and encrypted; enhanced UI to show green checkmark, "Saved" indicator, and helper text for encrypted fields
 
 ## Testing
 - Access http://localhost:3000/admin/processing-config as admin
@@ -97,6 +98,7 @@ Implement "Processing Engine Configuration" submenu under Admin Panel to manage 
 ## Git Commits
 - `0f6baa7` - Add Processing Engine Configuration management
 - `7c3bbe5` - Fix processing config save and populate default values
+- (pending) - Improve API key saved state visibility
 
 ## Last Updated
 2026-01-08
