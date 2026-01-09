@@ -142,14 +142,31 @@ router.get('/users/:userid', verifyToken, checkRole('admin', 'superadmin'), asyn
 router.put('/users/:userid', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { email, first_name, last_name, user_role, client_id, is_active, timezone } = req.body;
-    
-    await query(
-      `UPDATE user_profile 
-       SET email = ?, first_name = ?, last_name = ?, user_role = ?, 
-           client_id = ?, is_active = ?, timezone = ?
-       WHERE userid = ?`,
-      [email, first_name, last_name, user_role, client_id, is_active, timezone, req.params.userid]
-    );
+
+    // Check if user exists
+    const existingUser = await query('SELECT userid FROM user_profile WHERE userid = ?', [req.params.userid]);
+    if (existingUser.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Build dynamic update query with only provided fields
+    const updates = [];
+    const params = [];
+
+    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (first_name !== undefined) { updates.push('first_name = ?'); params.push(first_name); }
+    if (last_name !== undefined) { updates.push('last_name = ?'); params.push(last_name); }
+    if (user_role !== undefined) { updates.push('user_role = ?'); params.push(user_role); }
+    if (client_id !== undefined) { updates.push('client_id = ?'); params.push(client_id); }
+    if (is_active !== undefined) { updates.push('is_active = ?'); params.push(is_active); }
+    if (timezone !== undefined) { updates.push('timezone = ?'); params.push(timezone); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(req.params.userid);
+    await query(`UPDATE user_profile SET ${updates.join(', ')} WHERE userid = ?`, params);
 
     res.json({ success: true, message: 'User updated successfully' });
   } catch (error) {
@@ -245,11 +262,31 @@ router.get('/clients', verifyToken, checkRole('admin', 'superadmin'), async (req
 router.post('/clients', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { client_name, contact_name, email, phone_no, date_started, status, active_model } = req.body;
-    
+
+    if (!client_name) {
+      return res.status(400).json({ success: false, message: 'Client name is required.' });
+    }
+
+    // Check for duplicate email if provided
+    if (email) {
+      const existingEmail = await query('SELECT client_id FROM client WHERE email = ?', [email]);
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ success: false, message: 'A client with this email already exists.' });
+      }
+    }
+
     const result = await query(
       `INSERT INTO client (client_name, contact_name, email, phone_no, date_started, status, active_model)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [client_name, contact_name, email, phone_no, date_started, status || 'active', active_model]
+      [
+        client_name,
+        contact_name || null,
+        email || null,
+        phone_no || null,
+        date_started || null,
+        status || 'active',
+        active_model || null
+      ]
     );
 
     res.status(201).json({
@@ -259,6 +296,9 @@ router.post('/clients', verifyToken, checkRole('admin', 'superadmin'), async (re
     });
   } catch (error) {
     console.error('Create client error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'A client with this email already exists.' });
+    }
     res.status(500).json({ success: false, message: 'Error creating client.' });
   }
 });
@@ -267,14 +307,31 @@ router.post('/clients', verifyToken, checkRole('admin', 'superadmin'), async (re
 router.put('/clients/:clientId', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { client_name, contact_name, email, phone_no, date_started, status, active_model } = req.body;
-    
-    await query(
-      `UPDATE client 
-       SET client_name = ?, contact_name = ?, email = ?, phone_no = ?, 
-           date_started = ?, status = ?, active_model = ?
-       WHERE client_id = ?`,
-      [client_name, contact_name, email, phone_no, date_started, status, active_model, req.params.clientId]
-    );
+
+    // Check if client exists
+    const existingClient = await query('SELECT client_id FROM client WHERE client_id = ?', [req.params.clientId]);
+    if (existingClient.length === 0) {
+      return res.status(404).json({ success: false, message: 'Client not found.' });
+    }
+
+    // Build dynamic update query with only provided fields
+    const updates = [];
+    const params = [];
+
+    if (client_name !== undefined) { updates.push('client_name = ?'); params.push(client_name); }
+    if (contact_name !== undefined) { updates.push('contact_name = ?'); params.push(contact_name); }
+    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (phone_no !== undefined) { updates.push('phone_no = ?'); params.push(phone_no); }
+    if (date_started !== undefined) { updates.push('date_started = ?'); params.push(date_started); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (active_model !== undefined) { updates.push('active_model = ?'); params.push(active_model); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(req.params.clientId);
+    await query(`UPDATE client SET ${updates.join(', ')} WHERE client_id = ?`, params);
 
     res.json({ success: true, message: 'Client updated successfully' });
   } catch (error) {
@@ -300,7 +357,17 @@ router.get('/categories', verifyToken, async (req, res) => {
 router.post('/categories', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { category_name, category_description } = req.body;
-    
+
+    if (!category_name) {
+      return res.status(400).json({ success: false, message: 'Category name is required.' });
+    }
+
+    // Check for duplicate category name
+    const existing = await query('SELECT category_id FROM doc_category WHERE category_name = ?', [category_name]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Category with this name already exists.' });
+    }
+
     const result = await query(
       'INSERT INTO doc_category (category_name, category_description) VALUES (?, ?)',
       [category_name, category_description]
@@ -313,6 +380,9 @@ router.post('/categories', verifyToken, checkRole('admin', 'superadmin'), async 
     });
   } catch (error) {
     console.error('Create category error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Category with this name already exists.' });
+    }
     res.status(500).json({ success: false, message: 'Error creating category.' });
   }
 });
@@ -321,15 +391,33 @@ router.post('/categories', verifyToken, checkRole('admin', 'superadmin'), async 
 router.put('/categories/:categoryId', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { category_name, category_description } = req.body;
-    
-    await query(
-      'UPDATE doc_category SET category_name = ?, category_description = ? WHERE category_id = ?',
-      [category_name, category_description, req.params.categoryId]
-    );
+
+    // Check if category exists
+    const existingCategory = await query('SELECT category_id FROM doc_category WHERE category_id = ?', [req.params.categoryId]);
+    if (existingCategory.length === 0) {
+      return res.status(404).json({ success: false, message: 'Category not found.' });
+    }
+
+    // Build dynamic update query with only provided fields
+    const updates = [];
+    const params = [];
+
+    if (category_name !== undefined) { updates.push('category_name = ?'); params.push(category_name); }
+    if (category_description !== undefined) { updates.push('category_description = ?'); params.push(category_description); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(req.params.categoryId);
+    await query(`UPDATE doc_category SET ${updates.join(', ')} WHERE category_id = ?`, params);
 
     res.json({ success: true, message: 'Category updated successfully' });
   } catch (error) {
     console.error('Update category error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Category with this name already exists.' });
+    }
     res.status(500).json({ success: false, message: 'Error updating category.' });
   }
 });
@@ -378,18 +466,36 @@ router.get('/fields', verifyToken, async (req, res) => {
 // Create field
 router.post('/fields', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const { 
-      field_name, field_display_name, field_type, doc_category, 
-      is_required, default_value, validation_regex, keywords 
+    const {
+      field_name, field_display_name, field_type, doc_category,
+      is_required, default_value, validation_regex, keywords
     } = req.body;
-    
-    const keywordsJson = Array.isArray(keywords) ? JSON.stringify(keywords) : keywords;
-    
+
+    if (!field_name) {
+      return res.status(400).json({ success: false, message: 'Field name is required.' });
+    }
+
+    if (!doc_category) {
+      return res.status(400).json({ success: false, message: 'Document category is required.' });
+    }
+
+    // Handle undefined values - convert to null for MySQL
+    const keywordsJson = keywords ? (Array.isArray(keywords) ? JSON.stringify(keywords) : keywords) : null;
+
     const result = await query(
-      `INSERT INTO field_table 
+      `INSERT INTO field_table
        (field_name, field_display_name, field_type, doc_category, is_required, default_value, validation_regex, keywords)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [field_name, field_display_name, field_type, doc_category, is_required, default_value, validation_regex, keywordsJson]
+      [
+        field_name,
+        field_display_name || null,
+        field_type || 'string',
+        doc_category,
+        is_required === true ? 1 : 0,
+        default_value || null,
+        validation_regex || null,
+        keywordsJson
+      ]
     );
 
     res.status(201).json({
@@ -399,12 +505,11 @@ router.post('/fields', verifyToken, checkRole('admin', 'superadmin'), async (req
     });
   } catch (error) {
     console.error('Create field error:', error);
-    // Return detailed error for debugging
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ success: false, message: 'Field with this name already exists for this category.' });
     }
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error creating field.',
       error: error.message,
       code: error.code
@@ -415,24 +520,47 @@ router.post('/fields', verifyToken, checkRole('admin', 'superadmin'), async (req
 // Update field
 router.put('/fields/:fieldId', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const { 
-      field_name, field_display_name, field_type, doc_category, 
-      is_required, default_value, validation_regex, keywords 
+    const {
+      field_name, field_display_name, field_type, doc_category,
+      is_required, default_value, validation_regex, keywords
     } = req.body;
-    
-    const keywordsJson = Array.isArray(keywords) ? JSON.stringify(keywords) : keywords;
-    
-    await query(
-      `UPDATE field_table 
-       SET field_name = ?, field_display_name = ?, field_type = ?, doc_category = ?, 
-           is_required = ?, default_value = ?, validation_regex = ?, keywords = ?
-       WHERE field_id = ?`,
-      [field_name, field_display_name, field_type, doc_category, is_required, default_value, validation_regex, keywordsJson, req.params.fieldId]
-    );
+
+    // Check if field exists
+    const existingField = await query('SELECT field_id FROM field_table WHERE field_id = ?', [req.params.fieldId]);
+    if (existingField.length === 0) {
+      return res.status(404).json({ success: false, message: 'Field not found.' });
+    }
+
+    // Build dynamic update query with only provided fields
+    const updates = [];
+    const params = [];
+
+    if (field_name !== undefined) { updates.push('field_name = ?'); params.push(field_name); }
+    if (field_display_name !== undefined) { updates.push('field_display_name = ?'); params.push(field_display_name); }
+    if (field_type !== undefined) { updates.push('field_type = ?'); params.push(field_type); }
+    if (doc_category !== undefined) { updates.push('doc_category = ?'); params.push(doc_category); }
+    if (is_required !== undefined) { updates.push('is_required = ?'); params.push(is_required === true ? 1 : 0); }
+    if (default_value !== undefined) { updates.push('default_value = ?'); params.push(default_value || null); }
+    if (validation_regex !== undefined) { updates.push('validation_regex = ?'); params.push(validation_regex || null); }
+    if (keywords !== undefined) {
+      const keywordsJson = keywords ? (Array.isArray(keywords) ? JSON.stringify(keywords) : keywords) : null;
+      updates.push('keywords = ?');
+      params.push(keywordsJson);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(req.params.fieldId);
+    await query(`UPDATE field_table SET ${updates.join(', ')} WHERE field_id = ?`, params);
 
     res.json({ success: true, message: 'Field updated successfully' });
   } catch (error) {
     console.error('Update field error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Field with this name already exists for this category.' });
+    }
     res.status(500).json({ success: false, message: 'Error updating field.' });
   }
 });
@@ -1146,41 +1274,54 @@ router.get('/dashboard/analytics', verifyToken, async (req, res) => {
 router.get('/audit-logs', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { userid, action, from_date, to_date, page = 1, limit = 50 } = req.query;
-    
-    let sql = `
-      SELECT a.*, u.email as user_email
-      FROM audit_log a
-      LEFT JOIN user_profile u ON a.userid = u.userid
-      WHERE 1=1
-    `;
+
+    // Build WHERE clause
+    let whereClause = 'WHERE 1=1';
     const params = [];
 
     if (userid) {
-      sql += ' AND a.userid = ?';
+      whereClause += ' AND a.userid = ?';
       params.push(userid);
     }
     if (action) {
-      sql += ' AND a.action LIKE ?';
+      whereClause += ' AND a.action LIKE ?';
       params.push(`%${action}%`);
     }
     if (from_date) {
-      sql += ' AND a.created_at >= ?';
+      whereClause += ' AND a.created_at >= ?';
       params.push(from_date);
     }
     if (to_date) {
-      sql += ' AND a.created_at <= ?';
+      whereClause += ' AND a.created_at <= ?';
       params.push(to_date);
     }
 
-    const countSql = sql.replace(/SELECT.*FROM/, 'SELECT COUNT(*) as total FROM');
+    // Get total count with separate query
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM audit_log a
+      LEFT JOIN user_profile u ON a.userid = u.userid
+      ${whereClause}
+    `;
     const countResult = await query(countSql, params);
-    const total = countResult[0].total;
+    const total = countResult[0]?.total || 0;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    sql += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    // Use string interpolation for LIMIT/OFFSET (MySQL requirement)
+    const limitNum = parseInt(limit) || 50;
+    const pageNum = parseInt(page) || 1;
+    const offsetNum = (pageNum - 1) * limitNum;
 
-    const logs = await query(sql, params);
+    // Build data query
+    const dataSql = `
+      SELECT a.*, u.email as user_email
+      FROM audit_log a
+      LEFT JOIN user_profile u ON a.userid = u.userid
+      ${whereClause}
+      ORDER BY a.created_at DESC
+      LIMIT ${limitNum} OFFSET ${offsetNum}
+    `;
+
+    const logs = await query(dataSql, params);
 
     res.json({
       success: true,

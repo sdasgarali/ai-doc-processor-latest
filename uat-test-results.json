@@ -1,0 +1,444 @@
+{
+  "total": 62,
+  "passed": 60,
+  "failed": 0,
+  "skipped": 2,
+  "results": [
+    {
+      "module": "Auth",
+      "testName": "Admin login with valid credentials",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:41.924Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "JWT token verification",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:41.933Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Get user profile",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:41.942Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Login with invalid password rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.076Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Login with non-existent user rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.081Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Login with empty credentials rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.084Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Invalid token rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.087Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "Request without token rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.090Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "SQL injection in login rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.094Z"
+    },
+    {
+      "module": "Auth",
+      "testName": "XSS attempt in login rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.098Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Get all users list",
+      "status": "PASS",
+      "details": "Found 12 users",
+      "timestamp": "2026-01-09T05:43:42.107Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Create new user",
+      "status": "PASS",
+      "details": "User ID: 19",
+      "timestamp": "2026-01-09T05:43:42.210Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Get specific user by ID",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.216Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Update user details",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.224Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Duplicate email rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.227Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Invalid email format rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.230Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Weak password rejected",
+      "status": "SKIP",
+      "details": "Password policy not enforced (recommended for enterprise)",
+      "timestamp": "2026-01-09T05:43:42.343Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Non-existent user returns 404",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.346Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Update non-existent user rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.350Z"
+    },
+    {
+      "module": "UserMgmt",
+      "testName": "Delete user",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.358Z"
+    },
+    {
+      "module": "ClientMgmt",
+      "testName": "Get all clients list",
+      "status": "PASS",
+      "details": "Found 9 clients",
+      "timestamp": "2026-01-09T05:43:42.365Z"
+    },
+    {
+      "module": "ClientMgmt",
+      "testName": "Create new client",
+      "status": "PASS",
+      "details": "Client ID: 10",
+      "timestamp": "2026-01-09T05:43:42.374Z"
+    },
+    {
+      "module": "ClientMgmt",
+      "testName": "Update client details",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.382Z"
+    },
+    {
+      "module": "ClientMgmt",
+      "testName": "Missing required fields rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.386Z"
+    },
+    {
+      "module": "ClientMgmt",
+      "testName": "Update non-existent client rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.389Z"
+    },
+    {
+      "module": "DocCategory",
+      "testName": "Get all categories",
+      "status": "PASS",
+      "details": "Found 4 categories",
+      "timestamp": "2026-01-09T05:43:42.394Z"
+    },
+    {
+      "module": "DocCategory",
+      "testName": "Create new category",
+      "status": "PASS",
+      "details": "Category ID: 9",
+      "timestamp": "2026-01-09T05:43:42.401Z"
+    },
+    {
+      "module": "DocCategory",
+      "testName": "Update category",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.408Z"
+    },
+    {
+      "module": "DocCategory",
+      "testName": "Duplicate category name rejected",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.411Z"
+    },
+    {
+      "module": "DocCategory",
+      "testName": "Delete category",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.418Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Get documents list",
+      "status": "PASS",
+      "details": "Found 10 documents",
+      "timestamp": "2026-01-09T05:43:42.428Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Filter documents by status",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.433Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Get specific document details",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.443Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Non-existent document returns 404",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.446Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Negative page number handled",
+      "status": "PASS",
+      "details": "Normalized or empty result",
+      "timestamp": "2026-01-09T05:43:42.451Z"
+    },
+    {
+      "module": "Documents",
+      "testName": "Large limit capped or handled",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.458Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Get all processing configs",
+      "status": "PASS",
+      "details": "Found 24 default configs",
+      "timestamp": "2026-01-09T05:43:42.466Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Get default configuration",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.472Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Get category-specific config",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.475Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Get effective (merged) config",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.479Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Create/update configuration",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.487Z"
+    },
+    {
+      "module": "ProcConfig",
+      "testName": "Non-existent category returns default/empty",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.489Z"
+    },
+    {
+      "module": "Billing",
+      "testName": "Get billing configuration",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.493Z"
+    },
+    {
+      "module": "Billing",
+      "testName": "Get invoices list",
+      "status": "PASS",
+      "details": "Found 8 invoices",
+      "timestamp": "2026-01-09T05:43:42.498Z"
+    },
+    {
+      "module": "Billing",
+      "testName": "Get mail logs",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.519Z"
+    },
+    {
+      "module": "Billing",
+      "testName": "Non-existent invoice returns 404",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.524Z"
+    },
+    {
+      "module": "Dashboard",
+      "testName": "Get dashboard analytics",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.538Z"
+    },
+    {
+      "module": "Reports",
+      "testName": "Get client usage report",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.543Z"
+    },
+    {
+      "module": "Reports",
+      "testName": "Get processing summary",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.548Z"
+    },
+    {
+      "module": "Reports",
+      "testName": "Get audit logs",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.552Z"
+    },
+    {
+      "module": "FieldMgmt",
+      "testName": "Get all fields",
+      "status": "PASS",
+      "details": "Found 25 fields",
+      "timestamp": "2026-01-09T05:43:42.557Z"
+    },
+    {
+      "module": "FieldMgmt",
+      "testName": "Create new field",
+      "status": "PASS",
+      "details": "Field ID: 27",
+      "timestamp": "2026-01-09T05:43:42.563Z"
+    },
+    {
+      "module": "FieldMgmt",
+      "testName": "Update field",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.573Z"
+    },
+    {
+      "module": "FieldMgmt",
+      "testName": "Duplicate field name rejected",
+      "status": "SKIP",
+      "details": "May allow category-specific duplicates",
+      "timestamp": "2026-01-09T05:43:42.577Z"
+    },
+    {
+      "module": "FieldMgmt",
+      "testName": "Delete field",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.584Z"
+    },
+    {
+      "module": "Permissions",
+      "testName": "Get all permissions",
+      "status": "PASS",
+      "details": "Found 47 permissions",
+      "timestamp": "2026-01-09T05:43:42.592Z"
+    },
+    {
+      "module": "Permissions",
+      "testName": "Get admin role permissions",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.598Z"
+    },
+    {
+      "module": "Permissions",
+      "testName": "Get permission categories",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.603Z"
+    },
+    {
+      "module": "ModelMgmt",
+      "testName": "Get all models",
+      "status": "PASS",
+      "details": "Found 3 models",
+      "timestamp": "2026-01-09T05:43:42.607Z"
+    },
+    {
+      "module": "ModelMgmt",
+      "testName": "Get model versions",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.612Z"
+    },
+    {
+      "module": "ModelMgmt",
+      "testName": "Get OpenAI models",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.615Z"
+    },
+    {
+      "module": "RBAC",
+      "testName": "Invalid token rejected for admin route",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2026-01-09T05:43:42.618Z"
+    }
+  ],
+  "startTime": "2026-01-09T05:43:41.736Z",
+  "endTime": "2026-01-09T05:43:42.618Z"
+}

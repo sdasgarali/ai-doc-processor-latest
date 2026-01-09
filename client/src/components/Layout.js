@@ -56,14 +56,14 @@ const Layout = () => {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Documents', icon: <DocumentIcon />, path: '/documents' },
-    { text: 'Upload', icon: <UploadIcon />, path: '/upload' },
-    { text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/app/dashboard' },
+    { text: 'Documents', icon: <DocumentIcon />, path: '/app/documents' },
+    { text: 'Upload', icon: <UploadIcon />, path: '/app/upload' },
+    { text: 'Reports', icon: <ReportsIcon />, path: '/app/reports' },
   ];
 
   if (isAdmin) {
-    menuItems.push({ text: 'Admin Panel', icon: <AdminIcon />, path: '/admin' });
+    menuItems.push({ text: 'Admin Panel', icon: <AdminIcon />, path: '/app/admin' });
   }
 
   const drawer = (
@@ -129,7 +129,7 @@ const Layout = () => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
           >
-            <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
+            <MenuItem onClick={() => { navigate('/app/profile'); handleMenuClose(); }}>
               <ListItemIcon>
                 <PersonIcon fontSize="small" />
               </ListItemIcon>

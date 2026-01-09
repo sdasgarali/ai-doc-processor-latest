@@ -4,6 +4,7 @@ import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from './contexts/AuthContext';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
@@ -48,20 +49,22 @@ function App() {
 
   return (
     <Routes>
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
-      
+
       {/* Public Payment Route */}
       <Route path="/payment/:paymentLink" element={<PaymentPage />} />
-      
+
       <Route
-        path="/"
+        path="/app"
         element={
           <PrivateRoute>
             <Layout />
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to="/app/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="documents" element={<Documents />} />
         <Route path="documents/:processId" element={<DocumentDetails />} />
@@ -74,7 +77,7 @@ function App() {
         
         {/* Admin Routes */}
         <Route path="admin" element={<AdminPanel />}>
-          <Route index element={<Navigate to="/admin/users" replace />} />
+          <Route index element={<Navigate to="/app/admin/users" replace />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="clients" element={<ClientManagement />} />
           <Route path="doc-categories" element={<DocCategoryManagement />} />

@@ -286,9 +286,15 @@ router.get('/', verifyToken, async (req, res) => {
     const countResult = await query(countSql, params);
     const total = countResult[0].total;
 
-    // Add pagination - use string interpolation for LIMIT/OFFSET (safe since we convert to numbers)
-    const limitNum = Number(limit) || 20;
-    const pageNum = Number(page) || 1;
+    // Add pagination - validate and sanitize page/limit values
+    let limitNum = Number(limit) || 20;
+    let pageNum = Number(page) || 1;
+
+    // Ensure positive values
+    if (limitNum < 1) limitNum = 20;
+    if (limitNum > 100) limitNum = 100; // Cap at 100 for performance
+    if (pageNum < 1) pageNum = 1;
+
     const offsetNum = (pageNum - 1) * limitNum;
     
     sql += ` ORDER BY dp.time_initiated DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
