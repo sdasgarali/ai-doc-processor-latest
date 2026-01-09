@@ -186,15 +186,34 @@ router.post('/bulk', verifyToken, checkRole('admin', 'superadmin'), async (req, 
 
       const valueToStore = config.is_encrypted && config.config_value ? encrypt(config.config_value) : config.config_value;
 
-      await query(`
-        INSERT INTO processing_config (doc_category_id, config_key, config_value, is_encrypted, description)
-        VALUES (?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          config_value = VALUES(config_value),
-          is_encrypted = VALUES(is_encrypted),
-          description = VALUES(description),
-          updated_at = CURRENT_TIMESTAMP
-      `, [doc_category_id || null, config.config_key, valueToStore, config.is_encrypted || false, config.description || null]);
+      // Check if record exists (handle NULL doc_category_id properly)
+      let existing;
+      if (doc_category_id) {
+        existing = await query(
+          'SELECT config_id FROM processing_config WHERE doc_category_id = ? AND config_key = ?',
+          [doc_category_id, config.config_key]
+        );
+      } else {
+        existing = await query(
+          'SELECT config_id FROM processing_config WHERE doc_category_id IS NULL AND config_key = ?',
+          [config.config_key]
+        );
+      }
+
+      if (existing.length > 0) {
+        // Update existing record
+        await query(`
+          UPDATE processing_config
+          SET config_value = ?, is_encrypted = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE config_id = ?
+        `, [valueToStore, config.is_encrypted || false, config.description || null, existing[0].config_id]);
+      } else {
+        // Insert new record
+        await query(`
+          INSERT INTO processing_config (doc_category_id, config_key, config_value, is_encrypted, description)
+          VALUES (?, ?, ?, ?, ?)
+        `, [doc_category_id || null, config.config_key, valueToStore, config.is_encrypted || false, config.description || null]);
+      }
     }
 
     res.json({ success: true, message: 'Configuration saved successfully' });
