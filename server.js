@@ -17,6 +17,8 @@ const reportsRoutes = require('./routes/reports');
 const customReportsRoutes = require('./routes/customReports');
 const billingRoutes = require('./routes/billing');
 const processingConfigRoutes = require('./routes/processingConfig');
+const outputProfileRoutes = require('./routes/outputProfiles');
+const categoryCreationRoutes = require('./routes/categoryCreation');
 
 const app = express();
 const server = http.createServer(app);
@@ -58,13 +60,115 @@ app.use('/api/', limiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
 
-// Health check endpoint
+// Health check endpoint - Basic
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Detailed health check endpoint
+app.get('/health/detailed', async (req, res) => {
+  const healthStatus = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    checks: {}
+  };
+
+  // Database check
+  try {
+    const { testConnection } = require('./config/database');
+    const dbConnected = await testConnection();
+    healthStatus.checks.database = {
+      status: dbConnected ? 'healthy' : 'unhealthy',
+      latency: null
+    };
+
+    // Measure DB latency
+    const startTime = Date.now();
+    const { query } = require('./config/database');
+    await query('SELECT 1');
+    healthStatus.checks.database.latency = Date.now() - startTime;
+  } catch (error) {
+    healthStatus.status = 'degraded';
+    healthStatus.checks.database = {
+      status: 'unhealthy',
+      error: error.message
+    };
+  }
+
+  // File system check
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const uploadsDir = path.join(__dirname, 'uploads');
+    const resultsDir = path.join(__dirname, 'results');
+
+    await fs.access(uploadsDir);
+    await fs.access(resultsDir);
+
+    healthStatus.checks.filesystem = {
+      status: 'healthy',
+      uploadsDir: true,
+      resultsDir: true
+    };
+  } catch (error) {
+    healthStatus.status = 'degraded';
+    healthStatus.checks.filesystem = {
+      status: 'unhealthy',
+      error: error.message
+    };
+  }
+
+  // Memory check
+  const memUsage = process.memoryUsage();
+  const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
+  const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
+  const heapPercentage = (heapUsedMB / heapTotalMB) * 100;
+
+  healthStatus.checks.memory = {
+    status: heapPercentage < 90 ? 'healthy' : 'warning',
+    heapUsedMB: heapUsedMB.toFixed(2),
+    heapTotalMB: heapTotalMB.toFixed(2),
+    heapPercentage: heapPercentage.toFixed(2)
+  };
+
+  // Determine overall status
+  const checkStatuses = Object.values(healthStatus.checks).map(c => c.status);
+  if (checkStatuses.includes('unhealthy')) {
+    healthStatus.status = 'unhealthy';
+  } else if (checkStatuses.includes('warning') || checkStatuses.includes('degraded')) {
+    healthStatus.status = 'degraded';
+  }
+
+  const statusCode = healthStatus.status === 'healthy' ? 200 : healthStatus.status === 'degraded' ? 200 : 503;
+  res.status(statusCode).json(healthStatus);
+});
+
+// Readiness check (for Kubernetes)
+app.get('/health/ready', async (req, res) => {
+  try {
+    const { testConnection } = require('./config/database');
+    const dbConnected = await testConnection();
+
+    if (dbConnected) {
+      res.json({ status: 'ready', timestamp: new Date().toISOString() });
+    } else {
+      res.status(503).json({ status: 'not ready', reason: 'database not connected' });
+    }
+  } catch (error) {
+    res.status(503).json({ status: 'not ready', reason: error.message });
+  }
+});
+
+// Liveness check (for Kubernetes)
+app.get('/health/live', (req, res) => {
+  res.json({ status: 'alive', timestamp: new Date().toISOString() });
 });
 
 // API Routes
@@ -77,6 +181,8 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/custom-reports', customReportsRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/admin/processing-config', processingConfigRoutes);
+app.use('/api/output-profiles', outputProfileRoutes);
+app.use('/api/category-creation', categoryCreationRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

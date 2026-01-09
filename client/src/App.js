@@ -22,6 +22,8 @@ import BillingConfiguration from './pages/Admin/BillingConfiguration';
 import InvoiceManagement from './pages/Admin/InvoiceManagement';
 import MailLogs from './pages/Admin/MailLogs';
 import ProcessingEngineConfig from './pages/Admin/ProcessingEngineConfig';
+import OutputProfileManagement from './pages/Admin/OutputProfileManagement';
+import CategoryCreationManagement from './pages/Admin/CategoryCreationManagement';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports/Reports';
 import MyInvoices from './pages/Client/MyInvoices';
@@ -81,6 +83,8 @@ function App() {
           <Route path="users" element={<UserManagement />} />
           <Route path="clients" element={<ClientManagement />} />
           <Route path="doc-categories" element={<DocCategoryManagement />} />
+          <Route path="output-profiles" element={<OutputProfileManagement />} />
+          <Route path="category-creation" element={<CategoryCreationManagement />} />
           <Route path="model-versions" element={<ModelManagement />} />
           <Route path="fields" element={<FieldManagement />} />
           <Route path="permissions" element={<PermissionManagement />} />

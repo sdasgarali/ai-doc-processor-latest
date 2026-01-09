@@ -4,9 +4,21 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
+const {
+  validatePassword,
+  validatePasswordMiddleware,
+  validateNewPasswordMiddleware,
+  getPasswordRequirements
+} = require('../middleware/passwordPolicy');
+const {
+  loginLimiter,
+  registerLimiter,
+  passwordChangeLimiter,
+  passwordResetLimiter
+} = require('../middleware/rateLimiter');
 
-// Login
-router.post('/login', async (req, res) => {
+// Login - with strict rate limiting
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -85,23 +97,33 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Register (admin only can create users)
-router.post('/register', verifyToken, async (req, res) => {
+// Register (admin only can create users) - with rate limiting
+router.post('/register', registerLimiter, verifyToken, async (req, res) => {
   try {
     const { email, password, first_name, last_name, user_role, client_id, timezone } = req.body;
 
     // Only admin and superadmin can create users
     if (!['admin', 'superadmin'].includes(req.user.user_role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only administrators can create users.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can create users.'
       });
     }
 
     if (!email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and password are required.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required.'
+      });
+    }
+
+    // Validate password against policy
+    const passwordValidation = validatePassword(password, { email, first_name, last_name });
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors
       });
     }
 
@@ -112,14 +134,14 @@ router.post('/register', verifyToken, async (req, res) => {
     );
 
     if (existingUsers.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User with this email already exists.' 
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists.'
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with higher cost factor for security
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     const result = await query(
@@ -197,15 +219,25 @@ router.put('/profile', verifyToken, async (req, res) => {
   }
 });
 
-// Change password
-router.post('/change-password', verifyToken, async (req, res) => {
+// Change password - with rate limiting
+router.post('/change-password', passwordChangeLimiter, verifyToken, async (req, res) => {
   try {
     const { current_password, new_password } = req.body;
 
     if (!current_password || !new_password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Current and new passwords are required.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Current and new passwords are required.'
+      });
+    }
+
+    // Validate new password against policy
+    const passwordValidation = validatePassword(new_password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password does not meet security requirements',
+        errors: passwordValidation.errors
       });
     }
 
@@ -216,23 +248,32 @@ router.post('/change-password', verifyToken, async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found.' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
       });
     }
 
     // Verify current password
     const isValid = await bcrypt.compare(current_password, users[0].password);
     if (!isValid) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Current password is incorrect.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect.'
       });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(new_password, 10);
+    // Ensure new password is different from current
+    const isSamePassword = await bcrypt.compare(new_password, users[0].password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password.'
+      });
+    }
+
+    // Hash new password with higher cost factor
+    const hashedPassword = await bcrypt.hash(new_password, 12);
 
     // Update password
     await query(
@@ -253,29 +294,39 @@ router.post('/change-password', verifyToken, async (req, res) => {
   }
 });
 
-// Reset password (admin function)
-router.post('/reset-password/:userid', verifyToken, async (req, res) => {
+// Reset password (admin function) - with rate limiting
+router.post('/reset-password/:userid', passwordResetLimiter, verifyToken, async (req, res) => {
   try {
     const { new_password } = req.body;
     const targetUserId = req.params.userid;
 
     // Only admin and superadmin can reset passwords
     if (!['admin', 'superadmin'].includes(req.user.user_role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only administrators can reset passwords.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can reset passwords.'
       });
     }
 
     if (!new_password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'New password is required.' 
+      return res.status(400).json({
+        success: false,
+        message: 'New password is required.'
       });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(new_password, 10);
+    // Validate new password against policy
+    const passwordValidation = validatePassword(new_password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password does not meet security requirements',
+        errors: passwordValidation.errors
+      });
+    }
+
+    // Hash new password with higher cost factor
+    const hashedPassword = await bcrypt.hash(new_password, 12);
 
     // Update password
     const result = await query(
@@ -308,6 +359,14 @@ router.get('/verify', verifyToken, (req, res) => {
   res.json({
     success: true,
     user: req.user
+  });
+});
+
+// Get password requirements (for frontend display)
+router.get('/password-requirements', (req, res) => {
+  res.json({
+    success: true,
+    requirements: getPasswordRequirements()
   });
 });
 
