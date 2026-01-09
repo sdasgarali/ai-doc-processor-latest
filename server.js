@@ -16,6 +16,7 @@ const profileRoutes = require('./routes/profile');
 const reportsRoutes = require('./routes/reports');
 const customReportsRoutes = require('./routes/customReports');
 const billingRoutes = require('./routes/billing');
+const processingConfigRoutes = require('./routes/processingConfig');
 
 const app = express();
 const server = http.createServer(app);
@@ -75,6 +76,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/custom-reports', customReportsRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/admin/processing-config', processingConfigRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

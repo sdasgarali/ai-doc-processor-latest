@@ -16,7 +16,7 @@ from dataclasses import dataclass, asdict
 
 import requests
 
-from config import config
+from config import config, get_dynamic_config
 from cost_tracker import CostTracker, CostBreakdown
 
 # Lazy imports - only import what's needed based on provider config
@@ -185,6 +185,10 @@ class DocumentOrchestrator:
         logger.info(f"Process ID: {request.process_id}")
         logger.info(f"Filename: {request.filename}")
         logger.info(f"Document Category: {request.doc_category}")
+
+        # Load dynamic config for this document category (API config > .env fallback)
+        dynamic_config = get_dynamic_config(request.doc_category)
+        logger.info(f"Dynamic config loaded - OCR: {dynamic_config.ocr_provider}, LLM: {dynamic_config.llm_provider}")
 
         self.cost_tracker.start_tracking()
         start_time = datetime.now()

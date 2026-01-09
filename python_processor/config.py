@@ -1,13 +1,18 @@
 """
 Configuration module for Document Processor
 Loads settings from environment variables and .env file
+Supports fetching config from backend API with .env as fallback
 """
 
 import os
+import logging
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+import requests
+
+logger = logging.getLogger(__name__)
 
 # Load .env file - try current directory first, then parent directory
 current_dir_env = Path(__file__).parent / '.env'
@@ -179,5 +184,153 @@ class Config:
         return f"OCR: {self.providers.ocr_provider.upper()}, LLM: {self.providers.llm_provider.upper()}"
 
 
-# Global config instance
+def fetch_api_config(category_id: Optional[int] = None) -> Dict[str, str]:
+    """
+    Fetch configuration from backend API.
+    Returns a dict of config_key -> config_value.
+    Falls back to empty dict on any error.
+    """
+    try:
+        backend_url = os.getenv('BACKEND_URL', 'http://localhost:5000')
+        url = f"{backend_url}/api/admin/processing-config/effective"
+        if category_id:
+            url = f"{url}/{category_id}"
+
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success'):
+                logger.info(f"Fetched API config for category {category_id}: {len(data.get('data', {}))} settings")
+                return data.get('data', {})
+    except Exception as e:
+        logger.warning(f"Could not fetch API config (using .env fallback): {e}")
+
+    return {}
+
+
+def get_config_value(api_config: Dict[str, str], key: str, default: str = '') -> str:
+    """
+    Get config value with priority: API config > .env > default
+    """
+    # First check API config
+    if key in api_config and api_config[key]:
+        return api_config[key]
+
+    # Then check environment variable
+    env_value = os.getenv(key)
+    if env_value is not None:
+        return env_value
+
+    # Finally return default
+    return default
+
+
+class DynamicConfig:
+    """
+    Dynamic configuration that can be loaded based on document category.
+    Fetches from API with .env as fallback.
+    """
+
+    def __init__(self, category_id: Optional[int] = None):
+        self.category_id = category_id
+        self._api_config = None
+        self._loaded = False
+
+    def _ensure_loaded(self):
+        """Ensure API config is fetched"""
+        if not self._loaded:
+            self._api_config = fetch_api_config(self.category_id)
+            self._loaded = True
+
+    def get(self, key: str, default: str = '') -> str:
+        """Get a config value"""
+        self._ensure_loaded()
+        return get_config_value(self._api_config or {}, key, default)
+
+    def get_int(self, key: str, default: int = 0) -> int:
+        """Get an integer config value"""
+        try:
+            return int(self.get(key, str(default)))
+        except ValueError:
+            return default
+
+    def get_float(self, key: str, default: float = 0.0) -> float:
+        """Get a float config value"""
+        try:
+            return float(self.get(key, str(default)))
+        except ValueError:
+            return default
+
+    def get_bool(self, key: str, default: bool = False) -> bool:
+        """Get a boolean config value"""
+        value = self.get(key, 'YES' if default else 'NO')
+        return value.upper() in ('YES', 'TRUE', '1')
+
+    @property
+    def ocr_provider(self) -> str:
+        return self.get('OCR_PROVIDER', 'google')
+
+    @property
+    def llm_provider(self) -> str:
+        return self.get('LLM_PROVIDER', 'openai')
+
+    @property
+    def openai_api_key(self) -> str:
+        return self.get('OPENAI_API_KEY', '')
+
+    @property
+    def openai_model(self) -> str:
+        return self.get('OPENAI_MODEL', 'gpt-4o')
+
+    @property
+    def openai_max_tokens(self) -> int:
+        return self.get_int('OPENAI_MAX_TOKENS', 16384)
+
+    @property
+    def openai_temperature(self) -> float:
+        return self.get_float('OPENAI_TEMPERATURE', 0)
+
+    @property
+    def mistral_api_key(self) -> str:
+        return self.get('MISTRAL_API_KEY', '')
+
+    @property
+    def mistral_model(self) -> str:
+        return self.get('MISTRAL_MODEL', 'pixtral-large-latest')
+
+    @property
+    def docai_project_id(self) -> str:
+        return self.get('DOCAI_PROJECT_ID', '') or self.get('PROJECT_ID', '')
+
+    @property
+    def docai_location(self) -> str:
+        return self.get('DOCAI_LOCATION', 'us') or self.get('LOCATION', 'us')
+
+    @property
+    def docai_processor_id(self) -> str:
+        return self.get('DOCAI_PROCESSOR_ID', '') or self.get('PROCESSOR_ID', '')
+
+    @property
+    def max_pages_per_split(self) -> int:
+        return self.get_int('MAX_PAGES_PER_SPLIT', 15)
+
+    @property
+    def use_batch_processing(self) -> bool:
+        return self.get_bool('USE_BATCH_PROCESSING', True)
+
+    @property
+    def extraction_prompt(self) -> str:
+        """Custom extraction prompt (empty means use default)"""
+        return self.get('EXTRACTION_PROMPT', '')
+
+
+def get_dynamic_config(category_id: Optional[int] = None) -> DynamicConfig:
+    """
+    Get a dynamic config instance for the given category.
+    Use this when processing documents to get category-specific config.
+    """
+    return DynamicConfig(category_id)
+
+
+# Global config instance (for backward compatibility)
 config = Config()

@@ -13,6 +13,7 @@ const AdminPanel = () => {
     { label: 'Model Management', path: '/admin/model-versions' },
     { label: 'Field Management', path: '/admin/fields' },
     { label: 'Permission Management', path: '/admin/permissions' },
+    { label: 'Processing Engine', path: '/admin/processing-config' },
     { label: 'Pricing Configuration', path: '/admin/pricing' },
     { label: 'Billing Config', path: '/admin/billing/config' },
     { label: 'Invoices', path: '/admin/billing/invoices' },

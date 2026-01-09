@@ -20,6 +20,7 @@ import PricingConfig from './pages/Admin/PricingConfig';
 import BillingConfiguration from './pages/Admin/BillingConfiguration';
 import InvoiceManagement from './pages/Admin/InvoiceManagement';
 import MailLogs from './pages/Admin/MailLogs';
+import ProcessingEngineConfig from './pages/Admin/ProcessingEngineConfig';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports/Reports';
 import MyInvoices from './pages/Client/MyInvoices';
@@ -84,6 +85,7 @@ function App() {
           <Route path="billing/config" element={<BillingConfiguration />} />
           <Route path="billing/invoices" element={<InvoiceManagement />} />
           <Route path="billing/mail-logs" element={<MailLogs />} />
+          <Route path="processing-config" element={<ProcessingEngineConfig />} />
         </Route>
       </Route>
 
