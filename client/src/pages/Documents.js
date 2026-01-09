@@ -43,7 +43,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Documents = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,8 +61,6 @@ const Documents = () => {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
   useEffect(() => {
     fetchDocuments();
