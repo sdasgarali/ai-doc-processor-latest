@@ -146,14 +146,30 @@ router.get('/roles/:role/permissions', verifyToken, checkPermission('view_permis
   try {
     const { role } = req.params;
 
-    const rolePermissions = await query(
-      `SELECT p.*, rp.id as role_permission_id, rp.created_at as assigned_at
-       FROM permissions p
-       INNER JOIN role_permissions rp ON p.permission_id = rp.permission_id
-       WHERE rp.user_role = ?
-       ORDER BY p.permission_category, p.permission_name`,
-      [role]
-    );
+    // Fetch all permissions and role_permissions separately
+    const allPermissions = await query('SELECT * FROM permissions');
+    const rolePermissionsRaw = await query('SELECT * FROM role_permissions WHERE user_role = ?', [role]);
+
+    // Create permission lookup map
+    const permissionMap = {};
+    allPermissions.forEach(p => { permissionMap[p.permission_id] = p; });
+
+    // Build enriched role permissions
+    const rolePermissions = rolePermissionsRaw.map(rp => {
+      const permission = permissionMap[rp.permission_id] || {};
+      return {
+        ...permission,
+        role_permission_id: rp.id,
+        assigned_at: rp.created_at
+      };
+    });
+
+    // Sort by permission_category, then permission_name
+    rolePermissions.sort((a, b) => {
+      const catCompare = (a.permission_category || '').localeCompare(b.permission_category || '');
+      if (catCompare !== 0) return catCompare;
+      return (a.permission_name || '').localeCompare(b.permission_name || '');
+    });
 
     res.json({
       success: true,
@@ -212,11 +228,8 @@ router.get('/users/:userid/permissions', verifyToken, checkPermission('view_perm
   try {
     const { userid } = req.params;
 
-    // Get user's role-based permissions
-    const userInfo = await query(
-      'SELECT user_role FROM user_profile WHERE userid = ?',
-      [userid]
-    );
+    // Get user's role
+    const userInfo = await query('SELECT user_role FROM user_profile WHERE userid = ?', [userid]);
 
     if (userInfo.length === 0) {
       return res.status(404).json({
@@ -227,25 +240,39 @@ router.get('/users/:userid/permissions', verifyToken, checkPermission('view_perm
 
     const userRole = userInfo[0].user_role;
 
-    // Get role permissions
-    const rolePermissions = await query(
-      `SELECT p.*, 'role' as source, rp.created_at as assigned_at
-       FROM permissions p
-       INNER JOIN role_permissions rp ON p.permission_id = rp.permission_id
-       WHERE rp.user_role = ?`,
-      [userRole]
-    );
+    // Fetch all necessary data separately
+    const allPermissions = await query('SELECT * FROM permissions');
+    const rolePermissionsRaw = await query('SELECT * FROM role_permissions WHERE user_role = ?', [userRole]);
+    const userSpecificPermissionsRaw = await query('SELECT * FROM user_specific_permissions WHERE userid = ?', [userid]);
+    const users = await query('SELECT userid, email FROM user_profile');
 
-    // Get user-specific permissions
-    const userPermissions = await query(
-      `SELECT p.*, usp.permission_type, usp.expires_at, usp.created_at as assigned_at,
-              u.email as granted_by_email
-       FROM permissions p
-       INNER JOIN user_specific_permissions usp ON p.permission_id = usp.permission_id
-       LEFT JOIN user_profile u ON usp.granted_by = u.userid
-       WHERE usp.userid = ?`,
-      [userid]
-    );
+    // Create lookup maps
+    const permissionMap = {};
+    allPermissions.forEach(p => { permissionMap[p.permission_id] = p; });
+    const userMap = {};
+    users.forEach(u => { userMap[u.userid] = u.email; });
+
+    // Build role permissions with source indicator
+    const rolePermissions = rolePermissionsRaw.map(rp => {
+      const permission = permissionMap[rp.permission_id] || {};
+      return {
+        ...permission,
+        source: 'role',
+        assigned_at: rp.created_at
+      };
+    });
+
+    // Build user-specific permissions
+    const userPermissions = userSpecificPermissionsRaw.map(usp => {
+      const permission = permissionMap[usp.permission_id] || {};
+      return {
+        ...permission,
+        permission_type: usp.permission_type,
+        expires_at: usp.expires_at,
+        assigned_at: usp.created_at,
+        granted_by_email: usp.granted_by ? userMap[usp.granted_by] : null
+      };
+    });
 
     res.json({
       success: true,

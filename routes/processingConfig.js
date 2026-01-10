@@ -43,18 +43,15 @@ function maskValue(value) {
 // Get all configuration (grouped by category)
 router.get('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
-    // Get all configs with category info
-    const configs = await query(`
-      SELECT pc.*, dc.category_name
-      FROM processing_config pc
-      LEFT JOIN doc_category dc ON pc.doc_category_id = dc.category_id
-      ORDER BY pc.doc_category_id IS NULL DESC, pc.doc_category_id, pc.config_key
-    `);
-
-    // Get all categories for the dropdown
+    // Fetch configs and categories separately
+    const configs = await query('SELECT * FROM processing_config');
     const categories = await query('SELECT category_id, category_name FROM doc_category ORDER BY category_name');
 
-    // Process configs - decrypt and mask sensitive values
+    // Create category lookup map
+    const categoryMap = {};
+    categories.forEach(cat => { categoryMap[cat.category_id] = cat.category_name; });
+
+    // Process configs - add category_name and handle encryption
     const processedConfigs = configs.map(config => {
       let displayValue = config.config_value;
       if (config.is_encrypted && config.config_value) {
@@ -63,10 +60,19 @@ router.get('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res) 
       }
       return {
         ...config,
+        category_name: config.doc_category_id ? categoryMap[config.doc_category_id] : null,
         display_value: displayValue,
         // Don't send actual encrypted value to frontend
         config_value: config.is_encrypted ? '' : config.config_value
       };
+    });
+
+    // Sort: NULL doc_category_id first, then by doc_category_id, then by config_key
+    processedConfigs.sort((a, b) => {
+      if (a.doc_category_id === null && b.doc_category_id !== null) return -1;
+      if (a.doc_category_id !== null && b.doc_category_id === null) return 1;
+      if (a.doc_category_id !== b.doc_category_id) return (a.doc_category_id || 0) - (b.doc_category_id || 0);
+      return (a.config_key || '').localeCompare(b.config_key || '');
     });
 
     // Group by category

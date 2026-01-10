@@ -209,113 +209,119 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
 // Get all documents (with filters)
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const { 
-      status, 
-      client_id, 
-      doc_category, 
-      from_date, 
-      to_date, 
-      page = 1, 
-      limit = 20 
+    const {
+      status,
+      client_id,
+      doc_category,
+      from_date,
+      to_date,
+      page = 1,
+      limit = 20
     } = req.query;
 
-    let sql = `
-      SELECT
-        dp.process_id,
-        dp.doc_name,
-        dp.original_filename,
-        dp.no_of_pages,
-        dp.total_records,
-        dp.processing_status,
-        dp.time_initiated,
-        dp.time_finished,
-        dp.total_processing_time,
-        dp.cost,
-        dp.link_to_file,
-        dp.link_to_csv,
-        dp.link_to_json,
-        dp.session_id,
-        dp.model_id,
-        u.email as user_email,
-        c.client_name,
-        c.active_model,
-        mc.model_name,
-        dc.category_name,
-        COALESCE(dp.model_id, c.active_model) as effective_model_id
-      FROM document_processed dp
-      LEFT JOIN user_profile u ON dp.userid = u.userid
-      LEFT JOIN client c ON dp.client_id = c.client_id
-      LEFT JOIN model_config mc ON dp.model_id = mc.model_id
-      LEFT JOIN doc_category dc ON dp.doc_category = dc.category_id
-      WHERE 1=1
-    `;
+    // Fetch all documents first
+    let documents = await query('SELECT * FROM document_processed');
 
-    const params = [];
-
-    // Apply filters based on user role
+    // Apply filters in memory
     if (req.user.user_role === 'client' || req.user.user_role === 'user') {
-      sql += ' AND dp.client_id = ?';
-      params.push(req.user.client_id);
+      documents = documents.filter(d => d.client_id === req.user.client_id);
     } else if (client_id) {
-      sql += ' AND dp.client_id = ?';
-      params.push(client_id);
+      documents = documents.filter(d => d.client_id === parseInt(client_id));
     }
 
     if (status) {
-      sql += ' AND dp.processing_status = ?';
-      params.push(status);
+      documents = documents.filter(d => d.processing_status === status);
     }
 
     if (doc_category) {
-      sql += ' AND dp.doc_category = ?';
-      params.push(doc_category);
+      documents = documents.filter(d => d.doc_category === parseInt(doc_category));
     }
 
     if (from_date) {
-      sql += ' AND dp.time_initiated >= ?';
-      params.push(from_date);
+      const fromDateObj = new Date(from_date);
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) >= fromDateObj);
     }
 
     if (to_date) {
-      sql += ' AND dp.time_initiated <= ?';
-      params.push(to_date);
+      const toDateObj = new Date(to_date);
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) <= toDateObj);
     }
 
-    // Get total count
-    const countSql = sql.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(*) as total FROM');
-    const countResult = await query(countSql, params);
-    const total = countResult[0].total;
+    // Get total count before pagination
+    const total = documents.length;
 
-    // Add pagination - validate and sanitize page/limit values
+    // Sort by time_initiated DESC
+    documents.sort((a, b) => new Date(b.time_initiated || 0) - new Date(a.time_initiated || 0));
+
+    // Apply pagination
     let limitNum = Number(limit) || 20;
     let pageNum = Number(page) || 1;
-
-    // Ensure positive values
     if (limitNum < 1) limitNum = 20;
-    if (limitNum > 100) limitNum = 100; // Cap at 100 for performance
+    if (limitNum > 100) limitNum = 100;
     if (pageNum < 1) pageNum = 1;
-
     const offsetNum = (pageNum - 1) * limitNum;
-    
-    sql += ` ORDER BY dp.time_initiated DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
-    
-    const documents = await query(sql, params);
+    documents = documents.slice(offsetNum, offsetNum + limitNum);
+
+    // Fetch related data for enrichment
+    let users = [], clients = [], models = [], categories = [];
+    try { users = await query('SELECT userid, email FROM user_profile'); } catch (e) { console.warn('Error fetching users:', e.message); }
+    try { clients = await query('SELECT client_id, client_name, active_model FROM client'); } catch (e) { console.warn('Error fetching clients:', e.message); }
+    try { models = await query('SELECT model_id, model_name FROM model_config'); } catch (e) { console.warn('Error fetching models:', e.message); }
+    try { categories = await query('SELECT category_id, category_name FROM doc_category'); } catch (e) { console.warn('Error fetching categories:', e.message); }
+
+    // Create lookup maps
+    const userMap = {};
+    users.forEach(u => { userMap[u.userid] = u.email; });
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.client_id] = { client_name: c.client_name, active_model: c.active_model }; });
+    const modelMap = {};
+    models.forEach(m => { modelMap[m.model_id] = m.model_name; });
+    const categoryMap = {};
+    categories.forEach(c => { categoryMap[c.category_id] = c.category_name; });
+
+    // Enrich documents
+    const enrichedDocs = documents.map(dp => {
+      const client = clientMap[dp.client_id] || {};
+      return {
+        process_id: dp.process_id,
+        doc_name: dp.doc_name,
+        original_filename: dp.original_filename,
+        no_of_pages: dp.no_of_pages,
+        total_records: dp.total_records,
+        processing_status: dp.processing_status,
+        time_initiated: dp.time_initiated,
+        time_finished: dp.time_finished,
+        total_processing_time: dp.total_processing_time,
+        cost: dp.cost,
+        link_to_file: dp.link_to_file,
+        link_to_csv: dp.link_to_csv,
+        link_to_json: dp.link_to_json,
+        session_id: dp.session_id,
+        model_id: dp.model_id,
+        user_email: userMap[dp.userid] || null,
+        client_name: client.client_name || null,
+        active_model: client.active_model || null,
+        model_name: modelMap[dp.model_id] || null,
+        category_name: categoryMap[dp.doc_category] || null,
+        effective_model_id: dp.model_id || client.active_model || null
+      };
+    });
 
     res.json({
       success: true,
-      data: documents,
+      data: enrichedDocs,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / parseInt(limit))
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
     console.error('Get documents error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching documents.' 
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching documents.'
     });
   }
 });
@@ -325,47 +331,74 @@ router.get('/:processId', verifyToken, async (req, res) => {
   try {
     const { processId } = req.params;
 
-    let sql = `
-      SELECT 
-        dp.*,
-        u.email as user_email,
-        c.client_name,
-        mc.model_name,
-        dc.category_name
-      FROM document_processed dp
-      LEFT JOIN user_profile u ON dp.userid = u.userid
-      LEFT JOIN client c ON dp.client_id = c.client_id
-      LEFT JOIN model_config mc ON dp.model_id = mc.model_id
-      LEFT JOIN doc_category dc ON dp.doc_category = dc.category_id
-      WHERE dp.process_id = ?
-    `;
-
-    const params = [processId];
-
-    // Apply access control
-    if (req.user.user_role === 'client' || req.user.user_role === 'user') {
-      sql += ' AND dp.client_id = ?';
-      params.push(req.user.client_id);
-    }
-
-    const documents = await query(sql, params);
+    // Fetch document by process_id
+    let documents = await query('SELECT * FROM document_processed WHERE process_id = ?', [processId]);
 
     if (documents.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Document not found or access denied.' 
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found or access denied.'
       });
     }
 
+    const dp = documents[0];
+
+    // Apply access control
+    if (req.user.user_role === 'client' || req.user.user_role === 'user') {
+      if (dp.client_id !== req.user.client_id) {
+        return res.status(404).json({
+          success: false,
+          message: 'Document not found or access denied.'
+        });
+      }
+    }
+
+    // Fetch related data for enrichment
+    let userEmail = null, clientName = null, modelName = null, categoryName = null;
+
+    try {
+      if (dp.userid) {
+        const users = await query('SELECT email FROM user_profile WHERE userid = ?', [dp.userid]);
+        if (users.length > 0) userEmail = users[0].email;
+      }
+    } catch (e) { console.warn('Error fetching user:', e.message); }
+
+    try {
+      if (dp.client_id) {
+        const clients = await query('SELECT client_name FROM client WHERE client_id = ?', [dp.client_id]);
+        if (clients.length > 0) clientName = clients[0].client_name;
+      }
+    } catch (e) { console.warn('Error fetching client:', e.message); }
+
+    try {
+      if (dp.model_id) {
+        const models = await query('SELECT model_name FROM model_config WHERE model_id = ?', [dp.model_id]);
+        if (models.length > 0) modelName = models[0].model_name;
+      }
+    } catch (e) { console.warn('Error fetching model:', e.message); }
+
+    try {
+      if (dp.doc_category) {
+        const categories = await query('SELECT category_name FROM doc_category WHERE category_id = ?', [dp.doc_category]);
+        if (categories.length > 0) categoryName = categories[0].category_name;
+      }
+    } catch (e) { console.warn('Error fetching category:', e.message); }
+
     res.json({
       success: true,
-      data: documents[0]
+      data: {
+        ...dp,
+        user_email: userEmail,
+        client_name: clientName,
+        model_name: modelName,
+        category_name: categoryName
+      }
     });
   } catch (error) {
     console.error('Get document error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching document.' 
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching document.'
     });
   }
 });

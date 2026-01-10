@@ -531,38 +531,52 @@ router.post('/reminders/send', verifyToken, requireAdmin, async (req, res) => {
 router.get('/mail-logs', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { invoice_id, status, email_type } = req.query;
-    
-    let sql = `
-      SELECT ml.*, i.invoice_number, i.client_id, c.client_name
-      FROM mail_log ml
-      JOIN invoice i ON ml.invoice_id = i.invoice_id
-      JOIN client c ON i.client_id = c.client_id
-      WHERE 1=1
-    `;
-    const params = [];
 
+    // Fetch all mail logs
+    let logs = await query('SELECT * FROM mail_log');
+
+    // Apply filters in memory
     if (invoice_id) {
-      sql += ' AND ml.invoice_id = ?';
-      params.push(invoice_id);
+      logs = logs.filter(l => l.invoice_id === parseInt(invoice_id));
     }
-
     if (status) {
-      sql += ' AND ml.status = ?';
-      params.push(status);
+      logs = logs.filter(l => l.status === status);
     }
-
     if (email_type) {
-      sql += ' AND ml.email_type = ?';
-      params.push(email_type);
+      logs = logs.filter(l => l.email_type === email_type);
     }
 
-    sql += ' ORDER BY ml.created_at DESC LIMIT 100';
+    // Sort by created_at DESC
+    logs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-    const logs = await query(sql, params);
-    
+    // Limit to 100
+    logs = logs.slice(0, 100);
+
+    // Fetch related data for enrichment
+    let invoices = [], clients = [];
+    try { invoices = await query('SELECT invoice_id, invoice_number, client_id FROM invoice'); } catch (e) { console.warn('Error fetching invoices:', e.message); }
+    try { clients = await query('SELECT client_id, client_name FROM client'); } catch (e) { console.warn('Error fetching clients:', e.message); }
+
+    // Create lookup maps
+    const invoiceMap = {};
+    invoices.forEach(i => { invoiceMap[i.invoice_id] = { invoice_number: i.invoice_number, client_id: i.client_id }; });
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.client_id] = c.client_name; });
+
+    // Enrich logs
+    const enrichedLogs = logs.map(l => {
+      const invoice = l.invoice_id ? invoiceMap[l.invoice_id] : {};
+      return {
+        ...l,
+        invoice_number: invoice.invoice_number || null,
+        client_id: invoice.client_id || null,
+        client_name: invoice.client_id ? clientMap[invoice.client_id] : null
+      };
+    });
+
     res.json({
       success: true,
-      data: logs
+      data: enrichedLogs
     });
   } catch (error) {
     console.error('Get mail logs error:', error);

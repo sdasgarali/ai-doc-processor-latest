@@ -15,64 +15,74 @@ router.get('/client-usage', verifyToken, async (req, res) => {
       search
     } = req.query;
 
-    let sql = `
-      SELECT 
-        c.client_id,
-        c.client_name,
-        c.contact_name,
-        c.email,
-        c.phone_no,
-        COUNT(dp.process_id) as total_documents,
-        SUM(dp.no_of_pages) as total_pages,
-        SUM(dp.total_records) as total_records,
-        SUM(dp.cost) as total_cost,
-        MIN(dp.time_initiated) as first_upload,
-        MAX(dp.time_initiated) as last_upload,
-        COUNT(CASE WHEN dp.processing_status = 'Processed' THEN 1 END) as successful_docs,
-        COUNT(CASE WHEN dp.processing_status = 'Failed' THEN 1 END) as failed_docs
-      FROM client c
-      LEFT JOIN document_processed dp ON c.client_id = dp.client_id
-      WHERE 1=1
-    `;
+    // Fetch all clients and documents separately
+    let clients = await query('SELECT * FROM client');
+    let documents = await query('SELECT * FROM document_processed');
 
-    const params = [];
-
-    // Apply role-based access control
+    // Apply role-based access control on clients
     if (req.user.user_role === 'client') {
-      sql += ' AND c.client_id = ?';
-      params.push(req.user.client_id);
+      clients = clients.filter(c => c.client_id === req.user.client_id);
     } else if (client_id) {
-      sql += ' AND c.client_id = ?';
-      params.push(client_id);
+      clients = clients.filter(c => c.client_id === parseInt(client_id));
     }
 
-    // Date range filter
+    // Apply search filter on clients
+    if (search) {
+      const searchLower = search.toLowerCase();
+      clients = clients.filter(c =>
+        (c.client_name && c.client_name.toLowerCase().includes(searchLower)) ||
+        (c.contact_name && c.contact_name.toLowerCase().includes(searchLower)) ||
+        (c.email && c.email.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply filters on documents
     if (from_date) {
-      sql += ' AND dp.time_initiated >= ?';
-      params.push(from_date);
+      const fromDateObj = new Date(from_date);
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) >= fromDateObj);
     }
 
     if (to_date) {
-      sql += ' AND dp.time_initiated <= DATE_ADD(?, INTERVAL 1 DAY)';
-      params.push(to_date);
+      const toDateObj = new Date(to_date);
+      toDateObj.setDate(toDateObj.getDate() + 1); // Add 1 day for inclusive range
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) <= toDateObj);
     }
 
-    // Doc category filter
     if (doc_category) {
-      sql += ' AND dp.doc_category = ?';
-      params.push(doc_category);
+      documents = documents.filter(d => d.doc_category === parseInt(doc_category));
     }
 
-    // Search filter
-    if (search) {
-      sql += ' AND (c.client_name LIKE ? OR c.contact_name LIKE ? OR c.email LIKE ?)';
-      const searchPattern = `%${search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
-    }
+    // Group documents by client_id
+    const docsByClient = {};
+    documents.forEach(d => {
+      if (!docsByClient[d.client_id]) {
+        docsByClient[d.client_id] = [];
+      }
+      docsByClient[d.client_id].push(d);
+    });
 
-    sql += ' GROUP BY c.client_id ORDER BY total_cost DESC';
+    // Build results
+    const results = clients.map(c => {
+      const clientDocs = docsByClient[c.client_id] || [];
+      return {
+        client_id: c.client_id,
+        client_name: c.client_name,
+        contact_name: c.contact_name,
+        email: c.email,
+        phone_no: c.phone_no,
+        total_documents: clientDocs.length,
+        total_pages: clientDocs.reduce((sum, d) => sum + (d.no_of_pages || 0), 0),
+        total_records: clientDocs.reduce((sum, d) => sum + (d.total_records || 0), 0),
+        total_cost: clientDocs.reduce((sum, d) => sum + (parseFloat(d.cost) || 0), 0),
+        first_upload: clientDocs.length > 0 ? clientDocs.reduce((min, d) => d.time_initiated && (!min || new Date(d.time_initiated) < new Date(min)) ? d.time_initiated : min, null) : null,
+        last_upload: clientDocs.length > 0 ? clientDocs.reduce((max, d) => d.time_initiated && (!max || new Date(d.time_initiated) > new Date(max)) ? d.time_initiated : max, null) : null,
+        successful_docs: clientDocs.filter(d => d.processing_status === 'Processed').length,
+        failed_docs: clientDocs.filter(d => d.processing_status === 'Failed').length
+      };
+    });
 
-    const results = await query(sql, params);
+    // Sort by total_cost DESC
+    results.sort((a, b) => (b.total_cost || 0) - (a.total_cost || 0));
 
     // Calculate totals
     const totals = {
@@ -108,61 +118,74 @@ router.get('/client-usage/export', verifyToken, async (req, res) => {
       search
     } = req.query;
 
-    // Get report data (reuse same logic)
-    let sql = `
-      SELECT 
-        c.client_id,
-        c.client_name,
-        c.contact_name,
-        c.email,
-        c.phone_no,
-        COUNT(dp.process_id) as total_documents,
-        SUM(dp.no_of_pages) as total_pages,
-        SUM(dp.total_records) as total_records,
-        SUM(dp.cost) as total_cost,
-        MIN(dp.time_initiated) as first_upload,
-        MAX(dp.time_initiated) as last_upload,
-        COUNT(CASE WHEN dp.processing_status = 'Processed' THEN 1 END) as successful_docs,
-        COUNT(CASE WHEN dp.processing_status = 'Failed' THEN 1 END) as failed_docs
-      FROM client c
-      LEFT JOIN document_processed dp ON c.client_id = dp.client_id
-      WHERE 1=1
-    `;
+    // Fetch all clients and documents separately (same logic as /client-usage)
+    let clients = await query('SELECT * FROM client');
+    let documents = await query('SELECT * FROM document_processed');
 
-    const params = [];
-
+    // Apply role-based access control on clients
     if (req.user.user_role === 'client') {
-      sql += ' AND c.client_id = ?';
-      params.push(req.user.client_id);
+      clients = clients.filter(c => c.client_id === req.user.client_id);
     } else if (client_id) {
-      sql += ' AND c.client_id = ?';
-      params.push(client_id);
+      clients = clients.filter(c => c.client_id === parseInt(client_id));
     }
 
+    // Apply search filter on clients
+    if (search) {
+      const searchLower = search.toLowerCase();
+      clients = clients.filter(c =>
+        (c.client_name && c.client_name.toLowerCase().includes(searchLower)) ||
+        (c.contact_name && c.contact_name.toLowerCase().includes(searchLower)) ||
+        (c.email && c.email.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply filters on documents
     if (from_date) {
-      sql += ' AND dp.time_initiated >= ?';
-      params.push(from_date);
+      const fromDateObj = new Date(from_date);
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) >= fromDateObj);
     }
 
     if (to_date) {
-      sql += ' AND dp.time_initiated <= DATE_ADD(?, INTERVAL 1 DAY)';
-      params.push(to_date);
+      const toDateObj = new Date(to_date);
+      toDateObj.setDate(toDateObj.getDate() + 1);
+      documents = documents.filter(d => d.time_initiated && new Date(d.time_initiated) <= toDateObj);
     }
 
     if (doc_category) {
-      sql += ' AND dp.doc_category = ?';
-      params.push(doc_category);
+      documents = documents.filter(d => d.doc_category === parseInt(doc_category));
     }
 
-    if (search) {
-      sql += ' AND (c.client_name LIKE ? OR c.contact_name LIKE ? OR c.email LIKE ?)';
-      const searchPattern = `%${search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
-    }
+    // Group documents by client_id
+    const docsByClient = {};
+    documents.forEach(d => {
+      if (!docsByClient[d.client_id]) {
+        docsByClient[d.client_id] = [];
+      }
+      docsByClient[d.client_id].push(d);
+    });
 
-    sql += ' GROUP BY c.client_id ORDER BY total_cost DESC';
+    // Build results
+    const results = clients.map(c => {
+      const clientDocs = docsByClient[c.client_id] || [];
+      return {
+        client_id: c.client_id,
+        client_name: c.client_name,
+        contact_name: c.contact_name,
+        email: c.email,
+        phone_no: c.phone_no,
+        total_documents: clientDocs.length,
+        total_pages: clientDocs.reduce((sum, d) => sum + (d.no_of_pages || 0), 0),
+        total_records: clientDocs.reduce((sum, d) => sum + (d.total_records || 0), 0),
+        total_cost: clientDocs.reduce((sum, d) => sum + (parseFloat(d.cost) || 0), 0),
+        first_upload: clientDocs.length > 0 ? clientDocs.reduce((min, d) => d.time_initiated && (!min || new Date(d.time_initiated) < new Date(min)) ? d.time_initiated : min, null) : null,
+        last_upload: clientDocs.length > 0 ? clientDocs.reduce((max, d) => d.time_initiated && (!max || new Date(d.time_initiated) > new Date(max)) ? d.time_initiated : max, null) : null,
+        successful_docs: clientDocs.filter(d => d.processing_status === 'Processed').length,
+        failed_docs: clientDocs.filter(d => d.processing_status === 'Failed').length
+      };
+    });
 
-    const results = await query(sql, params);
+    // Sort by total_cost DESC
+    results.sort((a, b) => (b.total_cost || 0) - (a.total_cost || 0));
 
     // Create Excel workbook
     const workbook = new ExcelJS.Workbook();

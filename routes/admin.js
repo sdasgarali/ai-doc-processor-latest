@@ -10,47 +10,51 @@ const { verifyToken, checkRole } = require('../middleware/auth');
 router.get('/users', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { client_id, role, status, page = 1, limit = 20 } = req.query;
-    
-    let sql = `
-      SELECT u.userid, u.email, u.first_name, u.last_name, u.user_role, 
-             u.client_id, u.is_active, u.last_login, u.created_at, u.timezone,
-             c.client_name
-      FROM user_profile u
-      LEFT JOIN client c ON u.client_id = c.client_id
-      WHERE 1=1
-    `;
-    const params = [];
 
+    // Fetch all users (excluding password)
+    let users = await query('SELECT userid, email, first_name, last_name, user_role, client_id, is_active, last_login, created_at, timezone FROM user_profile');
+
+    // Apply filters
     if (client_id) {
-      sql += ' AND u.client_id = ?';
-      params.push(client_id);
+      users = users.filter(u => u.client_id === parseInt(client_id));
     }
     if (role) {
-      sql += ' AND u.user_role = ?';
-      params.push(role);
+      users = users.filter(u => u.user_role === role);
     }
     if (status !== undefined) {
-      sql += ' AND u.is_active = ?';
-      params.push(status === 'active' ? 1 : 0);
+      const isActive = status === 'active';
+      users = users.filter(u => u.is_active === isActive);
     }
 
-    // Get total count
-    const countSql = sql.replace(/SELECT.*FROM/, 'SELECT COUNT(*) as total FROM');
-    const countResult = await query(countSql, params);
-    const total = countResult[0].total;
+    // Get total count before pagination
+    const total = users.length;
 
-    // Add pagination - use string interpolation for LIMIT/OFFSET (MySQL requirement)
-    const limitNum = parseInt(limit);
-    const pageNum = parseInt(page);
+    // Sort by created_at DESC
+    users.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Apply pagination
+    const limitNum = parseInt(limit) || 20;
+    const pageNum = parseInt(page) || 1;
     const offsetNum = (pageNum - 1) * limitNum;
-    
-    sql += ` ORDER BY u.created_at DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
-    
-    const users = await query(sql, params);
+    users = users.slice(offsetNum, offsetNum + limitNum);
+
+    // Fetch clients for enrichment
+    let clients = [];
+    try { clients = await query('SELECT client_id, client_name FROM client'); } catch (e) { console.warn('Error fetching clients:', e.message); }
+
+    // Create client lookup map
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.client_id] = c.client_name; });
+
+    // Enrich users with client_name
+    const enrichedUsers = users.map(u => ({
+      ...u,
+      client_name: u.client_id ? clientMap[u.client_id] : null
+    }));
 
     res.json({
       success: true,
-      data: users,
+      data: enrichedUsers,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -60,10 +64,10 @@ router.get('/users', verifyToken, checkRole('admin', 'superadmin'), async (req, 
     });
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error fetching users.',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -107,28 +111,37 @@ router.post('/users', verifyToken, checkRole('admin', 'superadmin'), async (req,
 // Get user by ID
 router.get('/users/:userid', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const users = await query(
-      `SELECT u.*, c.client_name
-       FROM user_profile u
-       LEFT JOIN client c ON u.client_id = c.client_id
-       WHERE u.userid = ?`,
-      [req.params.userid]
-    );
+    const users = await query('SELECT * FROM user_profile WHERE userid = ?', [req.params.userid]);
 
     if (users.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
+    const user = users[0];
+
+    // Get client name if user has client_id
+    let clientName = null;
+    if (user.client_id) {
+      try {
+        const clients = await query('SELECT client_name FROM client WHERE client_id = ?', [user.client_id]);
+        if (clients.length > 0) clientName = clients[0].client_name;
+      } catch (e) { console.warn('Error fetching client:', e.message); }
+    }
+
     // Get user permissions
-    const permissions = await query(
-      'SELECT permission_name FROM user_permissions WHERE userid = ?',
-      [req.params.userid]
-    );
+    let permissions = [];
+    try {
+      permissions = await query('SELECT permission_name FROM user_permissions WHERE userid = ?', [req.params.userid]);
+    } catch (e) { console.warn('Error fetching permissions:', e.message); }
+
+    // Exclude password from response
+    const { password, ...userWithoutPassword } = user;
 
     res.json({
       success: true,
       data: {
-        ...users[0],
+        ...userWithoutPassword,
+        client_name: clientName,
         permissions: permissions.map(p => p.permission_name)
       }
     });
@@ -482,24 +495,33 @@ router.delete('/categories/:categoryId', verifyToken, checkRole('superadmin'), a
 router.get('/fields', verifyToken, async (req, res) => {
   try {
     const { doc_category } = req.query;
-    
-    let sql = `
-      SELECT f.*, dc.category_name
-      FROM field_table f
-      LEFT JOIN doc_category dc ON f.doc_category = dc.category_id
-      WHERE 1=1
-    `;
-    const params = [];
 
+    // Fetch all fields
+    let fields = await query('SELECT * FROM field_table');
+
+    // Apply doc_category filter
     if (doc_category) {
-      sql += ' AND f.doc_category = ?';
-      params.push(doc_category);
+      fields = fields.filter(f => f.doc_category === parseInt(doc_category));
     }
 
-    sql += ' ORDER BY f.field_name';
-    
-    const fields = await query(sql, params);
-    res.json({ success: true, data: fields });
+    // Sort by field_name
+    fields.sort((a, b) => (a.field_name || '').localeCompare(b.field_name || ''));
+
+    // Fetch categories for enrichment
+    let categories = [];
+    try { categories = await query('SELECT category_id, category_name FROM doc_category'); } catch (e) { console.warn('Error fetching categories:', e.message); }
+
+    // Create category lookup map
+    const categoryMap = {};
+    categories.forEach(c => { categoryMap[c.category_id] = c.category_name; });
+
+    // Enrich fields with category_name
+    const enrichedFields = fields.map(f => ({
+      ...f,
+      category_name: f.doc_category ? categoryMap[f.doc_category] : null
+    }));
+
+    res.json({ success: true, data: enrichedFields });
   } catch (error) {
     console.error('Get fields error:', error);
     res.status(500).json({ success: false, message: 'Error fetching fields.' });
@@ -625,29 +647,40 @@ router.delete('/fields/:fieldId', verifyToken, checkRole('admin', 'superadmin'),
 router.get('/models', verifyToken, async (req, res) => {
   try {
     const { doc_category, client_id } = req.query;
-    
-    let sql = `
-      SELECT m.*, dc.category_name, c.client_name
-      FROM model_config m
-      LEFT JOIN doc_category dc ON m.doc_category = dc.category_id
-      LEFT JOIN client c ON m.client_id = c.client_id
-      WHERE 1=1
-    `;
-    const params = [];
 
+    // Fetch all models
+    let models = await query('SELECT * FROM model_config');
+
+    // Apply filters
     if (doc_category) {
-      sql += ' AND m.doc_category = ?';
-      params.push(doc_category);
+      models = models.filter(m => m.doc_category === parseInt(doc_category));
     }
     if (client_id) {
-      sql += ' AND m.client_id = ?';
-      params.push(client_id);
+      models = models.filter(m => m.client_id === parseInt(client_id));
     }
 
-    sql += ' ORDER BY m.created_at DESC';
-    
-    const models = await query(sql, params);
-    res.json({ success: true, data: models });
+    // Sort by created_at DESC
+    models.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Fetch related data for enrichment
+    let categories = [], clients = [];
+    try { categories = await query('SELECT category_id, category_name FROM doc_category'); } catch (e) { console.warn('Error fetching categories:', e.message); }
+    try { clients = await query('SELECT client_id, client_name FROM client'); } catch (e) { console.warn('Error fetching clients:', e.message); }
+
+    // Create lookup maps
+    const categoryMap = {};
+    categories.forEach(c => { categoryMap[c.category_id] = c.category_name; });
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.client_id] = c.client_name; });
+
+    // Enrich models
+    const enrichedModels = models.map(m => ({
+      ...m,
+      category_name: m.doc_category ? categoryMap[m.doc_category] : null,
+      client_name: m.client_id ? clientMap[m.client_id] : null
+    }));
+
+    res.json({ success: true, data: enrichedModels });
   } catch (error) {
     console.error('Get models error:', error);
     res.status(500).json({ success: false, message: 'Error fetching models.' });
@@ -657,33 +690,61 @@ router.get('/models', verifyToken, async (req, res) => {
 // Get model with field mappings
 router.get('/models/:modelId', verifyToken, async (req, res) => {
   try {
-    const models = await query(
-      `SELECT m.*, dc.category_name, c.client_name
-       FROM model_config m
-       LEFT JOIN doc_category dc ON m.doc_category = dc.category_id
-       LEFT JOIN client c ON m.client_id = c.client_id
-       WHERE m.model_id = ?`,
-      [req.params.modelId]
-    );
+    const models = await query('SELECT * FROM model_config WHERE model_id = ?', [req.params.modelId]);
 
     if (models.length === 0) {
       return res.status(404).json({ success: false, message: 'Model not found.' });
     }
 
+    const model = models[0];
+
+    // Get related data for enrichment
+    let categoryName = null, clientName = null;
+    if (model.doc_category) {
+      try {
+        const cats = await query('SELECT category_name FROM doc_category WHERE category_id = ?', [model.doc_category]);
+        if (cats.length > 0) categoryName = cats[0].category_name;
+      } catch (e) { console.warn('Error fetching category:', e.message); }
+    }
+    if (model.client_id) {
+      try {
+        const clients = await query('SELECT client_name FROM client WHERE client_id = ?', [model.client_id]);
+        if (clients.length > 0) clientName = clients[0].client_name;
+      } catch (e) { console.warn('Error fetching client:', e.message); }
+    }
+
     // Get field mappings
-    const mappings = await query(
-      `SELECT fm.*, f.field_name, f.field_display_name, f.field_type, f.keywords
-       FROM field_mapping fm
-       JOIN field_table f ON fm.field_id = f.field_id
-       WHERE fm.model_id = ? AND fm.is_active = true
-       ORDER BY fm.field_order`,
-      [req.params.modelId]
-    );
+    let mappings = [];
+    try {
+      const allMappings = await query('SELECT * FROM field_mapping WHERE model_id = ? AND is_active = true', [req.params.modelId]);
+      const fields = await query('SELECT * FROM field_table');
+
+      // Create field lookup map
+      const fieldMap = {};
+      fields.forEach(f => { fieldMap[f.field_id] = f; });
+
+      // Enrich mappings with field data
+      mappings = allMappings.map(fm => {
+        const field = fieldMap[fm.field_id] || {};
+        return {
+          ...fm,
+          field_name: field.field_name,
+          field_display_name: field.field_display_name,
+          field_type: field.field_type,
+          keywords: field.keywords
+        };
+      });
+
+      // Sort by field_order
+      mappings.sort((a, b) => (a.field_order || 0) - (b.field_order || 0));
+    } catch (e) { console.warn('Error fetching field mappings:', e.message); }
 
     res.json({
       success: true,
       data: {
-        ...models[0],
+        ...model,
+        category_name: categoryName,
+        client_name: clientName,
         mappings
       }
     });
@@ -1111,30 +1172,51 @@ router.delete('/permissions/:userid/:permissionName', verifyToken, checkRole('ad
 router.get('/model-versions', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    
-    // Get total count
-    const countResult = await query('SELECT COUNT(*) as total FROM model');
-    const total = countResult[0].total;
 
-    // Add pagination - use string interpolation for LIMIT/OFFSET (MySQL requirement)
-    const limitNum = parseInt(limit);
-    const pageNum = parseInt(page);
+    // Fetch all models
+    let models = await query('SELECT * FROM model');
+    const total = models.length;
+
+    // Sort by created_at DESC
+    models.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Apply pagination
+    const limitNum = parseInt(limit) || 20;
+    const pageNum = parseInt(page) || 1;
     const offsetNum = (pageNum - 1) * limitNum;
-    
-    const sql = `
-      SELECT m.*, dc.category_name, mc.model_name as ai_model_name,
-             (SELECT COUNT(*) FROM field_table f WHERE f.doc_category = m.doc_category_id) as no_of_fields
-      FROM model m
-      LEFT JOIN doc_category dc ON m.doc_category_id = dc.category_id
-      LEFT JOIN model_config mc ON m.ai_model_id = mc.model_id
-      ORDER BY m.created_at DESC
-      LIMIT ${limitNum} OFFSET ${offsetNum}
-    `;
-    const models = await query(sql);
+    models = models.slice(offsetNum, offsetNum + limitNum);
+
+    // Fetch related data for enrichment
+    let categories = [], modelConfigs = [], fields = [];
+    try { categories = await query('SELECT category_id, category_name FROM doc_category'); } catch (e) { console.warn('Error fetching categories:', e.message); }
+    try { modelConfigs = await query('SELECT model_id, model_name FROM model_config'); } catch (e) { console.warn('Error fetching model_config:', e.message); }
+    try { fields = await query('SELECT doc_category FROM field_table'); } catch (e) { console.warn('Error fetching fields:', e.message); }
+
+    // Create lookup maps
+    const categoryMap = {};
+    categories.forEach(c => { categoryMap[c.category_id] = c.category_name; });
+    const modelConfigMap = {};
+    modelConfigs.forEach(mc => { modelConfigMap[mc.model_id] = mc.model_name; });
+
+    // Count fields by category
+    const fieldCountByCategory = {};
+    fields.forEach(f => {
+      if (f.doc_category) {
+        fieldCountByCategory[f.doc_category] = (fieldCountByCategory[f.doc_category] || 0) + 1;
+      }
+    });
+
+    // Enrich models
+    const enrichedModels = models.map(m => ({
+      ...m,
+      category_name: m.doc_category_id ? categoryMap[m.doc_category_id] : null,
+      ai_model_name: m.ai_model_id ? modelConfigMap[m.ai_model_id] : null,
+      no_of_fields: m.doc_category_id ? (fieldCountByCategory[m.doc_category_id] || 0) : 0
+    }));
 
     res.json({
       success: true,
-      data: models,
+      data: enrichedModels,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -1338,62 +1420,60 @@ router.get('/audit-logs', verifyToken, checkRole('admin', 'superadmin'), async (
   try {
     const { userid, action, from_date, to_date, page = 1, limit = 50 } = req.query;
 
-    // Build WHERE clause
-    let whereClause = 'WHERE 1=1';
-    const params = [];
+    // Fetch all audit logs
+    let logs = await query('SELECT * FROM audit_log');
 
+    // Apply filters in memory
     if (userid) {
-      whereClause += ' AND a.userid = ?';
-      params.push(userid);
+      logs = logs.filter(l => l.userid === parseInt(userid));
     }
     if (action) {
-      whereClause += ' AND a.action LIKE ?';
-      params.push(`%${action}%`);
+      const actionLower = action.toLowerCase();
+      logs = logs.filter(l => l.action && l.action.toLowerCase().includes(actionLower));
     }
     if (from_date) {
-      whereClause += ' AND a.created_at >= ?';
-      params.push(from_date);
+      const fromDateObj = new Date(from_date);
+      logs = logs.filter(l => l.created_at && new Date(l.created_at) >= fromDateObj);
     }
     if (to_date) {
-      whereClause += ' AND a.created_at <= ?';
-      params.push(to_date);
+      const toDateObj = new Date(to_date);
+      logs = logs.filter(l => l.created_at && new Date(l.created_at) <= toDateObj);
     }
 
-    // Get total count with separate query
-    const countSql = `
-      SELECT COUNT(*) as total
-      FROM audit_log a
-      LEFT JOIN user_profile u ON a.userid = u.userid
-      ${whereClause}
-    `;
-    const countResult = await query(countSql, params);
-    const total = countResult[0]?.total || 0;
+    // Get total count before pagination
+    const total = logs.length;
 
-    // Use string interpolation for LIMIT/OFFSET (MySQL requirement)
+    // Sort by created_at DESC
+    logs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Apply pagination
     const limitNum = parseInt(limit) || 50;
     const pageNum = parseInt(page) || 1;
     const offsetNum = (pageNum - 1) * limitNum;
+    logs = logs.slice(offsetNum, offsetNum + limitNum);
 
-    // Build data query
-    const dataSql = `
-      SELECT a.*, u.email as user_email
-      FROM audit_log a
-      LEFT JOIN user_profile u ON a.userid = u.userid
-      ${whereClause}
-      ORDER BY a.created_at DESC
-      LIMIT ${limitNum} OFFSET ${offsetNum}
-    `;
+    // Fetch users for enrichment
+    let users = [];
+    try { users = await query('SELECT userid, email FROM user_profile'); } catch (e) { console.warn('Error fetching users:', e.message); }
 
-    const logs = await query(dataSql, params);
+    // Create user lookup map
+    const userMap = {};
+    users.forEach(u => { userMap[u.userid] = u.email; });
+
+    // Enrich logs with user_email
+    const enrichedLogs = logs.map(l => ({
+      ...l,
+      user_email: l.userid ? userMap[l.userid] : null
+    }));
 
     res.json({
       success: true,
-      data: logs,
+      data: enrichedLogs,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / parseInt(limit))
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
