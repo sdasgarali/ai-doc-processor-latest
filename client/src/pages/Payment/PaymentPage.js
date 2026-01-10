@@ -37,7 +37,7 @@ const PaymentPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5000/api/billing/payment/${paymentLink}`
+        `/api/billing/payment/${paymentLink}`
       );
       
       setInvoice(response.data.data);
@@ -73,7 +73,7 @@ const PaymentPage = () => {
 
       // For demo purposes, we'll simulate the payment
       const response = await axios.post(
-        `http://localhost:5000/api/billing/payment/${paymentLink}`,
+        `/api/billing/payment/${paymentLink}`,
         {
           payment_method_id: 'test_payment_method',
           amount: invoice.amount_due

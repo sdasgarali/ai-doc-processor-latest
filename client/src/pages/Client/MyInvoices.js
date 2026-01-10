@@ -33,7 +33,7 @@ const MyInvoices = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/billing/invoices', {
+      const response = await axios.get('/api/billing/invoices', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -51,7 +51,7 @@ const MyInvoices = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/billing/invoices/${invoiceId}/pdf`,
+        `/api/billing/invoices/${invoiceId}/pdf`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'

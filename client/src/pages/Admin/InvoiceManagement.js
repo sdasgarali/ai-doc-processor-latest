@@ -86,7 +86,7 @@ const InvoiceManagement = () => {
       if (filters.year) params.append('year', filters.year);
       
       const response = await axios.get(
-        `http://localhost:5000/api/billing/invoices?${params.toString()}`,
+        `/api/billing/invoices?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -119,7 +119,7 @@ const InvoiceManagement = () => {
       setGenerating(true);
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        'http://localhost:5000/api/billing/invoices/generate',
+        '/api/billing/invoices/generate',
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -139,7 +139,7 @@ const InvoiceManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:5000/api/billing/invoices/${invoiceId}/send`,
+        `/api/billing/invoices/${invoiceId}/send`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -156,7 +156,7 @@ const InvoiceManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/billing/invoices/${invoiceId}/pdf`,
+        `/api/billing/invoices/${invoiceId}/pdf`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'
@@ -195,7 +195,7 @@ const InvoiceManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        `http://localhost:5000/api/billing/invoices/${editingInvoice.invoice_id}`,
+        `/api/billing/invoices/${editingInvoice.invoice_id}`,
         editData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -218,7 +218,7 @@ const InvoiceManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:5000/api/billing/reminders/send',
+        '/api/billing/reminders/send',
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

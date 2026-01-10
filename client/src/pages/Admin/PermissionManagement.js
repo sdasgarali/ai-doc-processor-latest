@@ -90,7 +90,7 @@ const PermissionManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/permissions/permissions', {
+      const response = await axios.get('/api/permissions/permissions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -109,7 +109,7 @@ const PermissionManagement = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/users', {
+      const response = await axios.get('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data.data || []);
@@ -121,7 +121,7 @@ const PermissionManagement = () => {
   const fetchRolePermissions = async (role) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/permissions/roles/${role}/permissions`, {
+      const response = await axios.get(`/api/permissions/roles/${role}/permissions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -136,7 +136,7 @@ const PermissionManagement = () => {
   const fetchUserPermissions = async (userid) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/permissions/users/${userid}/permissions`, {
+      const response = await axios.get(`/api/permissions/users/${userid}/permissions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -169,7 +169,7 @@ const PermissionManagement = () => {
       const token = localStorage.getItem('token');
       
       await axios.post(
-        `http://localhost:5000/api/permissions/roles/${selectedRole}/permissions`,
+        `/api/permissions/roles/${selectedRole}/permissions`,
         { permissionIds: Array.from(rolePermissionIds) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -216,7 +216,7 @@ const PermissionManagement = () => {
       }));
       
       await axios.post(
-        `http://localhost:5000/api/permissions/users/${selectedUser.userid}/permissions/bulk`,
+        `/api/permissions/users/${selectedUser.userid}/permissions/bulk`,
         { permissions: permissionsArray },
         { headers: { Authorization: `Bearer ${token}` } }
       );

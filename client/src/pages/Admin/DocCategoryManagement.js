@@ -50,7 +50,7 @@ const DocCategoryManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/categories', {
+      const response = await axios.get('/api/admin/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data.data || []);
@@ -95,14 +95,14 @@ const DocCategoryManagement = () => {
       
       if (editingCategory) {
         await axios.put(
-          `http://localhost:5000/api/admin/categories/${editingCategory.category_id}`,
+          `/api/admin/categories/${editingCategory.category_id}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSuccess('Document category updated successfully!');
       } else {
         await axios.post(
-          'http://localhost:5000/api/admin/categories',
+          '/api/admin/categories',
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -126,7 +126,7 @@ const DocCategoryManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/categories/${id}`, {
+      await axios.delete(`/api/admin/categories/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

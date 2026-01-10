@@ -60,7 +60,7 @@ const ClientUsageReport = () => {
     try {
       const token = localStorage.getItem('token');
       // Only fetch active clients for dropdown
-      const response = await axios.get('http://localhost:5000/api/admin/clients?status=active', {
+      const response = await axios.get('/api/admin/clients?status=active', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClients(response.data.data || []);
@@ -72,7 +72,7 @@ const ClientUsageReport = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/categories', {
+      const response = await axios.get('/api/admin/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data.data || []);
@@ -94,7 +94,7 @@ const ClientUsageReport = () => {
       if (filters.search) params.append('search', filters.search);
 
       const response = await axios.get(
-        `http://localhost:5000/api/reports/client-usage?${params}`,
+        `/api/reports/client-usage?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -121,7 +121,7 @@ const ClientUsageReport = () => {
       if (filters.search) params.append('search', filters.search);
 
       const response = await axios.get(
-        `http://localhost:5000/api/reports/client-usage/export?${params}`,
+        `/api/reports/client-usage/export?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'

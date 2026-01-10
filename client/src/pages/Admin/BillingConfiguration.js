@@ -46,7 +46,7 @@ const BillingConfiguration = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/billing/config', {
+      const response = await axios.get('/api/billing/config', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setConfig(response.data.data);
@@ -77,7 +77,7 @@ const BillingConfiguration = () => {
       setSaving(true);
       const token = localStorage.getItem('token');
       await axios.put(
-        'http://localhost:5000/api/billing/config',
+        '/api/billing/config',
         config,
         { headers: { Authorization: `Bearer ${token}` } }
       );

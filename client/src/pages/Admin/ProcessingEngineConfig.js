@@ -116,7 +116,7 @@ const ProcessingEngineConfig = () => {
       const token = localStorage.getItem('token');
 
       const response = await axios.get(
-        'http://localhost:5000/api/admin/processing-config',
+        '/api/admin/processing-config',
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -211,7 +211,7 @@ const ProcessingEngineConfig = () => {
       });
 
       await axios.post(
-        'http://localhost:5000/api/admin/processing-config/bulk',
+        '/api/admin/processing-config/bulk',
         { doc_category_id: null, configs },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -253,7 +253,7 @@ const ProcessingEngineConfig = () => {
       });
 
       await axios.post(
-        'http://localhost:5000/api/admin/processing-config/bulk',
+        '/api/admin/processing-config/bulk',
         { doc_category_id: parseInt(categoryId), configs },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -275,7 +275,7 @@ const ProcessingEngineConfig = () => {
       const token = localStorage.getItem('token');
 
       await axios.post(
-        `http://localhost:5000/api/admin/processing-config/copy-to-category/${categoryId}`,
+        `/api/admin/processing-config/copy-to-category/${categoryId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -37,7 +37,8 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/dashboard/analytics', {
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await axios.get(`${apiUrl}/api/admin/dashboard/analytics`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAnalytics(response.data.data);

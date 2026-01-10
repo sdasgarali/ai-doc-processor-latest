@@ -98,10 +98,10 @@ const Documents = () => {
         params.append('to_date', toDate);
       }
       
-      console.log('Fetching documents with URL:', `http://localhost:5000/api/documents?${params}`);
+      console.log('Fetching documents with URL:', `/api/documents?${params}`);
       
       const response = await axios.get(
-        `http://localhost:5000/api/documents?${params}`,
+        `/api/documents?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -157,7 +157,7 @@ const Documents = () => {
       console.log('Download initiated:', { processId, fileType, originalFilename });
       const token = localStorage.getItem('token');
 
-      const url = `http://localhost:5000/api/documents/${processId}/download/${fileType}`;
+      const url = `/api/documents/${processId}/download/${fileType}`;
       console.log('Request URL:', url);
 
       const response = await axios.get(url, {
@@ -250,7 +250,7 @@ const Documents = () => {
 
       // Delete each selected document
       const deletePromises = selectedDocs.map(processId =>
-        axios.delete(`http://localhost:5000/api/documents/${processId}`, {
+        axios.delete(`/api/documents/${processId}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       );

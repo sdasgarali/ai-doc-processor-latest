@@ -61,7 +61,7 @@ const MailLogs = () => {
       if (filters.email_type) params.append('email_type', filters.email_type);
       
       const response = await axios.get(
-        `http://localhost:5000/api/billing/mail-logs?${params.toString()}`,
+        `/api/billing/mail-logs?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -83,7 +83,7 @@ const MailLogs = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:5000/api/billing/mail-logs/${mailLogId}/retry`,
+        `/api/billing/mail-logs/${mailLogId}/retry`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -95,7 +95,7 @@ const ModelManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/model-versions', {
+      const response = await axios.get('/api/admin/model-versions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setModels(response.data.data || []);
@@ -111,7 +111,7 @@ const ModelManagement = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/categories', {
+      const response = await axios.get('/api/admin/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data.data || []);
@@ -123,7 +123,7 @@ const ModelManagement = () => {
   const fetchAiModels = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/models', {
+      const response = await axios.get('/api/admin/models', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAiModels(response.data.data || []);
@@ -179,14 +179,14 @@ const ModelManagement = () => {
       
       if (editingModel) {
         await axios.put(
-          `http://localhost:5000/api/admin/model-versions/${editingModel.id}`,
+          `/api/admin/model-versions/${editingModel.id}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSuccess('Model updated successfully!');
       } else {
         await axios.post(
-          'http://localhost:5000/api/admin/model-versions',
+          '/api/admin/model-versions',
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -210,7 +210,7 @@ const ModelManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/model-versions/${id}`, {
+      await axios.delete(`/api/admin/model-versions/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -245,7 +245,7 @@ const ModelManagement = () => {
       setLoadingFields(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/admin/fields?doc_category=${categoryId}`,
+        `/api/admin/fields?doc_category=${categoryId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setFields(response.data.data || []);
@@ -323,14 +323,14 @@ const ModelManagement = () => {
 
       if (editingField) {
         await axios.put(
-          `http://localhost:5000/api/admin/fields/${editingField.field_id}`,
+          `/api/admin/fields/${editingField.field_id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSuccess('Field updated successfully!');
       } else {
         await axios.post(
-          'http://localhost:5000/api/admin/fields',
+          '/api/admin/fields',
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -355,7 +355,7 @@ const ModelManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/fields/${fieldId}`, {
+      await axios.delete(`/api/admin/fields/${fieldId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

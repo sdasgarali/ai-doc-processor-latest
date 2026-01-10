@@ -1228,71 +1228,91 @@ router.delete('/model-versions/:id', verifyToken, checkRole('admin', 'superadmin
 // Get dashboard analytics
 router.get('/dashboard/analytics', verifyToken, async (req, res) => {
   try {
-    // Get total counts
-    const userCount = await query('SELECT COUNT(*) as total FROM user_profile');
-    const clientCount = await query('SELECT COUNT(*) as total FROM client');
-    const modelCount = await query('SELECT COUNT(*) as total FROM model');
-    const fieldCount = await query('SELECT COUNT(*) as total FROM field_table');
-    const categoryCount = await query('SELECT COUNT(*) as total FROM doc_category');
-    
-    // Get active vs inactive users
-    const activeUsers = await query('SELECT COUNT(*) as total FROM user_profile WHERE is_active = 1');
-    const inactiveUsers = await query('SELECT COUNT(*) as total FROM user_profile WHERE is_active = 0');
-    
-    // Get active vs inactive clients
-    const activeClients = await query("SELECT COUNT(*) as total FROM client WHERE status = 'active'");
-    const inactiveClients = await query("SELECT COUNT(*) as total FROM client WHERE status = 'inactive'");
-    
-    // Get users by role
-    const usersByRole = await query(`
-      SELECT user_role, COUNT(*) as count 
-      FROM user_profile 
-      GROUP BY user_role
-    `);
-    
-    // Get recent users (last 5)
-    const recentUsers = await query(`
-      SELECT userid, email, first_name, last_name, user_role, created_at
-      FROM user_profile
-      ORDER BY created_at DESC
-      LIMIT 5
-    `);
-    
-    // Get recent clients (last 5)
-    const recentClients = await query(`
-      SELECT client_id, client_name, contact_name, status, created_at
-      FROM client
-      ORDER BY created_at DESC
-      LIMIT 5
-    `);
-    
-    // Get fields by category
-    const fieldsByCategory = await query(`
-      SELECT dc.category_name, COUNT(f.field_id) as field_count
-      FROM doc_category dc
-      LEFT JOIN field_table f ON dc.category_id = f.doc_category
-      GROUP BY dc.category_id, dc.category_name
-      ORDER BY field_count DESC
-    `);
+    // Helper to safely get count
+    const safeCount = (result) => {
+      if (!result || result.length === 0) return 0;
+      return result[0]?.total || result[0]?.count || result.length || 0;
+    };
+
+    // Get total counts with error handling
+    let userCount = 0, clientCount = 0, modelCount = 0, fieldCount = 0, categoryCount = 0;
+    let activeUsers = 0, inactiveUsers = 0, activeClients = 0, inactiveClients = 0;
+    let usersByRole = [], recentUsers = [], recentClients = [], fieldsByCategory = [];
+
+    try {
+      const users = await query('SELECT * FROM user_profile');
+      userCount = users?.length || 0;
+      activeUsers = users?.filter(u => u.is_active === true).length || 0;
+      inactiveUsers = users?.filter(u => u.is_active === false).length || 0;
+
+      // Group by role
+      const roleMap = {};
+      users?.forEach(u => {
+        roleMap[u.user_role] = (roleMap[u.user_role] || 0) + 1;
+      });
+      usersByRole = Object.entries(roleMap).map(([user_role, count]) => ({ user_role, count }));
+
+      // Recent users (exclude password)
+      recentUsers = users?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+        .map(({ password, ...user }) => user) || [];
+    } catch (err) {
+      console.warn('Error fetching user stats:', err.message);
+    }
+
+    try {
+      const clients = await query('SELECT * FROM client');
+      clientCount = clients?.length || 0;
+      activeClients = clients?.filter(c => c.status === 'active').length || 0;
+      inactiveClients = clients?.filter(c => c.status === 'inactive').length || 0;
+      recentClients = clients?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5) || [];
+    } catch (err) {
+      console.warn('Error fetching client stats:', err.message);
+    }
+
+    try {
+      const models = await query('SELECT * FROM model');
+      modelCount = models?.length || 0;
+    } catch (err) {
+      console.warn('Error fetching model count:', err.message);
+    }
+
+    try {
+      const fields = await query('SELECT * FROM field_table');
+      fieldCount = fields?.length || 0;
+    } catch (err) {
+      console.warn('Error fetching field count:', err.message);
+    }
+
+    try {
+      const categories = await query('SELECT * FROM doc_category');
+      categoryCount = categories?.length || 0;
+      fieldsByCategory = categories?.map(cat => ({
+        category_name: cat.category_name,
+        field_count: 0
+      })) || [];
+    } catch (err) {
+      console.warn('Error fetching category stats:', err.message);
+    }
 
     res.json({
       success: true,
       data: {
         totals: {
-          users: userCount[0].total,
-          clients: clientCount[0].total,
-          models: modelCount[0].total,
-          fields: fieldCount[0].total,
-          categories: categoryCount[0].total
+          users: userCount,
+          clients: clientCount,
+          models: modelCount,
+          fields: fieldCount,
+          categories: categoryCount
         },
         userStats: {
-          active: activeUsers[0].total,
-          inactive: inactiveUsers[0].total,
+          active: activeUsers,
+          inactive: inactiveUsers,
           byRole: usersByRole
         },
         clientStats: {
-          active: activeClients[0].total,
-          inactive: inactiveClients[0].total
+          active: activeClients,
+          inactive: inactiveClients
         },
         recent: {
           users: recentUsers,

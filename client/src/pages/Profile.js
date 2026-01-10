@@ -94,7 +94,7 @@ const Profile = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/profile/me', {
+      const response = await axios.get('/api/profile/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -116,7 +116,7 @@ const Profile = () => {
   const fetchActivity = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/profile/activity', {
+      const response = await axios.get('/api/profile/activity', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActivity(response.data.data);
@@ -144,7 +144,7 @@ const Profile = () => {
       const token = localStorage.getItem('token');
       
       await axios.put(
-        'http://localhost:5000/api/profile/me',
+        '/api/profile/me',
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -187,7 +187,7 @@ const Profile = () => {
       const token = localStorage.getItem('token');
       
       await axios.post(
-        'http://localhost:5000/api/profile/change-password',
+        '/api/profile/change-password',
         passwordForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -73,7 +73,7 @@ const DocumentDetails = () => {
 
       // Fetch document metadata
       const docResponse = await axios.get(
-        `http://localhost:5000/api/documents/${processId}`,
+        `/api/documents/${processId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log('DEBUG: Document metadata response =', docResponse.data);
@@ -83,7 +83,7 @@ const DocumentDetails = () => {
       if (docResponse.data.data.processing_status === 'Processed') {
         try {
           const pdfResponse = await axios.get(
-            `http://localhost:5000/api/documents/${processId}/download/pdf`,
+            `/api/documents/${processId}/download/pdf`,
             {
               headers: { Authorization: `Bearer ${token}` },
               responseType: 'blob'
@@ -101,7 +101,7 @@ const DocumentDetails = () => {
         try {
           console.log('DEBUG: Fetching extracted-data...');
           const dataResponse = await axios.get(
-            `http://localhost:5000/api/documents/${processId}/extracted-data`,
+            `/api/documents/${processId}/extracted-data`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           console.log('DEBUG: Extracted data response =', dataResponse.data);
@@ -113,7 +113,7 @@ const DocumentDetails = () => {
           if (results.length === 0) {
             console.log('DEBUG: No data in DB, trying JSON file...');
             const jsonResponse = await axios.get(
-              `http://localhost:5000/api/documents/${processId}/data`,
+              `/api/documents/${processId}/data`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             results = jsonResponse.data.data.results || [];
@@ -128,7 +128,7 @@ const DocumentDetails = () => {
           if (docResponse.data.data.doc_category === '2' || docResponse.data.data.doc_category === 2) {
             try {
               const jsonResponse = await axios.get(
-                `http://localhost:5000/api/documents/${processId}/data`,
+                `/api/documents/${processId}/data`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
               setJsonContent(JSON.stringify(jsonResponse.data.data, null, 2));
@@ -234,7 +234,7 @@ const DocumentDetails = () => {
       });
 
       await axios.post(
-        `http://localhost:5000/api/documents/${processId}/extracted-data`,
+        `/api/documents/${processId}/extracted-data`,
         { records: recordsToSave },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -64,7 +64,7 @@ const PricingConfig = () => {
 
       // Fetch Document AI cost
       const docAiResponse = await axios.get(
-        'http://localhost:5000/api/admin/config/docai_cost_per_page',
+        '/api/admin/config/docai_cost_per_page',
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -74,7 +74,7 @@ const PricingConfig = () => {
 
       // Fetch models
       const modelsResponse = await axios.get(
-        'http://localhost:5000/api/admin/models',
+        '/api/admin/models',
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -97,7 +97,7 @@ const PricingConfig = () => {
       const token = localStorage.getItem('token');
 
       const response = await axios.put(
-        'http://localhost:5000/api/admin/config/docai_cost_per_page',
+        '/api/admin/config/docai_cost_per_page',
         { value: docAiCost },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -168,7 +168,7 @@ const PricingConfig = () => {
       if (editingModel) {
         // Update existing model
         await axios.put(
-          `http://localhost:5000/api/admin/models/${editingModel.model_id}`,
+          `/api/admin/models/${editingModel.model_id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -176,7 +176,7 @@ const PricingConfig = () => {
       } else {
         // Create new model
         await axios.post(
-          'http://localhost:5000/api/admin/models',
+          '/api/admin/models',
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -203,7 +203,7 @@ const PricingConfig = () => {
       const token = localStorage.getItem('token');
 
       await axios.delete(
-        `http://localhost:5000/api/admin/models/${modelId}`,
+        `/api/admin/models/${modelId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

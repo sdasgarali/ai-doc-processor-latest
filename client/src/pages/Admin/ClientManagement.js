@@ -66,7 +66,7 @@ const ClientManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      let url = 'http://localhost:5000/api/admin/clients';
+      let url = '/api/admin/clients';
       
       const params = new URLSearchParams();
       if (filterStatus) params.append('status', filterStatus);
@@ -88,7 +88,7 @@ const ClientManagement = () => {
   const fetchModels = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/model-versions', {
+      const response = await axios.get('/api/admin/model-versions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setModels(response.data.data || []);
@@ -159,14 +159,14 @@ const ClientManagement = () => {
       
       if (editingClient) {
         await axios.put(
-          `http://localhost:5000/api/admin/clients/${editingClient.client_id}`,
+          `/api/admin/clients/${editingClient.client_id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSuccess('Client updated successfully!');
       } else {
         await axios.post(
-          'http://localhost:5000/api/admin/clients',
+          '/api/admin/clients',
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -204,7 +204,7 @@ const ClientManagement = () => {
         updateData.end_date = null;
       }
 
-      await axios.put(`http://localhost:5000/api/admin/clients/${client.client_id}`, updateData, {
+      await axios.put(`/api/admin/clients/${client.client_id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

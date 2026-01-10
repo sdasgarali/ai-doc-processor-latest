@@ -70,7 +70,7 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/users', {
+      const response = await axios.get('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data.data || []);
@@ -87,7 +87,7 @@ const UserManagement = () => {
     try {
       const token = localStorage.getItem('token');
       // Only fetch active clients for dropdown
-      const response = await axios.get('http://localhost:5000/api/admin/clients?status=active', {
+      const response = await axios.get('/api/admin/clients?status=active', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClients(response.data.data || []);
@@ -147,7 +147,7 @@ const UserManagement = () => {
       if (editingUser) {
         // Update user
         await axios.put(
-          `http://localhost:5000/api/admin/users/${editingUser.userid}`,
+          `/api/admin/users/${editingUser.userid}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -155,7 +155,7 @@ const UserManagement = () => {
       } else {
         // Create user
         await axios.post(
-          'http://localhost:5000/api/admin/users',
+          '/api/admin/users',
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -199,7 +199,7 @@ const UserManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:5000/api/admin/users/${resetPasswordUser.userid}/reset-password`,
+        `/api/admin/users/${resetPasswordUser.userid}/reset-password`,
         { newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -220,7 +220,7 @@ const UserManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/users/${userid}`, {
+      await axios.delete(`/api/admin/users/${userid}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

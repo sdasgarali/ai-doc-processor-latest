@@ -80,7 +80,7 @@ const CustomReportBuilder = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/custom-reports/fields/${module}`,
+        `/api/custom-reports/fields/${module}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAvailableFields(response.data.data || []);
@@ -97,7 +97,7 @@ const CustomReportBuilder = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        'http://localhost:5000/api/custom-reports',
+        '/api/custom-reports',
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSavedReports(response.data.data || []);
@@ -150,7 +150,7 @@ const CustomReportBuilder = () => {
       if (selectedReportId) {
         // Update existing report
         await axios.put(
-          `http://localhost:5000/api/custom-reports/${selectedReportId}`,
+          `/api/custom-reports/${selectedReportId}`,
           reportData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -158,7 +158,7 @@ const CustomReportBuilder = () => {
       } else {
         // Create new report
         await axios.post(
-          'http://localhost:5000/api/custom-reports',
+          '/api/custom-reports',
           reportData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -182,7 +182,7 @@ const CustomReportBuilder = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/custom-reports/${reportId}`,
+        `/api/custom-reports/${reportId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -208,7 +208,7 @@ const CustomReportBuilder = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `http://localhost:5000/api/custom-reports/${reportId}/execute`,
+        `/api/custom-reports/${reportId}/execute`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -228,7 +228,7 @@ const CustomReportBuilder = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `http://localhost:5000/api/custom-reports/${reportId}/export`,
+        `/api/custom-reports/${reportId}/export`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -261,7 +261,7 @@ const CustomReportBuilder = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.delete(
-        `http://localhost:5000/api/custom-reports/${reportId}`,
+        `/api/custom-reports/${reportId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
