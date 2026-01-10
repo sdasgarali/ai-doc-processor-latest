@@ -26,7 +26,8 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
+  Block as DeactivateIcon,
+  CheckCircle as ActivateIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
@@ -51,6 +52,7 @@ const ClientManagement = () => {
     email: '',
     phone_no: '',
     date_started: '',
+    end_date: '',
     status: 'active',
     active_model: ''
   });
@@ -104,6 +106,7 @@ const ClientManagement = () => {
         email: client.email || '',
         phone_no: client.phone_no || '',
         date_started: client.date_started ? client.date_started.split('T')[0] : '',
+        end_date: client.end_date ? client.end_date.split('T')[0] : '',
         status: client.status || 'active',
         active_model: client.active_model || ''
       });
@@ -115,6 +118,7 @@ const ClientManagement = () => {
         email: '',
         phone_no: '',
         date_started: '',
+        end_date: '',
         status: 'active',
         active_model: ''
       });
@@ -131,6 +135,7 @@ const ClientManagement = () => {
       email: '',
       phone_no: '',
       date_started: '',
+      end_date: '',
       status: 'active',
       active_model: ''
     });
@@ -178,23 +183,37 @@ const ClientManagement = () => {
     }
   };
 
-  const handleDeleteClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+  const handleToggleStatus = async (client) => {
+    const newStatus = client.status === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'inactive' ? 'deactivate' : 'reactivate';
+
+    if (!window.confirm(`Are you sure you want to ${action} "${client.client_name}"? ${newStatus === 'inactive' ? 'All features will be disabled for this client.' : 'This will restore access to all features.'}`)) {
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/clients/${clientId}`, {
+      const updateData = {
+        status: newStatus
+      };
+
+      // Set end_date when deactivating, clear it when reactivating
+      if (newStatus === 'inactive') {
+        updateData.end_date = new Date().toISOString().split('T')[0];
+      } else {
+        updateData.end_date = null;
+      }
+
+      await axios.put(`http://localhost:5000/api/admin/clients/${client.client_id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      setSuccess('Client deleted successfully!');
+
+      setSuccess(`Client ${action}d successfully!`);
       fetchClients();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('Error deleting client:', err);
-      setError(err.response?.data?.message || 'Failed to delete client');
+      console.error('Error updating client status:', err);
+      setError(err.response?.data?.message || `Failed to ${action} client`);
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -269,48 +288,61 @@ const ClientManagement = () => {
               <TableRow sx={{ bgcolor: 'primary.main' }}>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Client Name</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact Name</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Email</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Phone</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Date Started</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Start Date</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>End Date</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Active Model</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={8} align="center">
                     {searchTerm ? 'No clients match your search' : 'No clients found'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredClients.map((client) => (
-                  <TableRow key={client.client_id} hover>
+                  <TableRow
+                    key={client.client_id}
+                    hover
+                    sx={{
+                      opacity: client.status === 'inactive' ? 0.6 : 1,
+                      bgcolor: client.status === 'inactive' ? 'action.hover' : 'inherit'
+                    }}
+                  >
                     <TableCell>{client.client_id}</TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">
                         {client.client_name}
                       </Typography>
+                      {client.phone_no && (
+                        <Typography variant="caption" color="text.secondary">
+                          {client.phone_no}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>{client.contact_name || '-'}</TableCell>
                     <TableCell>{client.email || '-'}</TableCell>
-                    <TableCell>{client.phone_no || '-'}</TableCell>
                     <TableCell>{formatDate(client.date_started)}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={client.status}
-                        color={client.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {client.active_model ? (
-                        <Chip label={`Model ID: ${client.active_model}`} size="small" variant="outlined" />
+                      {client.end_date ? (
+                        <Typography variant="body2" color="error">
+                          {formatDate(client.end_date)}
+                        </Typography>
                       ) : (
                         <Typography variant="body2" color="text.secondary">-</Typography>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={client.status === 'active' ? 'Active' : 'Inactive'}
+                        color={client.status === 'active' ? 'success' : 'error'}
+                        size="small"
+                        variant={client.status === 'active' ? 'filled' : 'outlined'}
+                      />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -319,9 +351,13 @@ const ClientManagement = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete Client">
-                          <IconButton size="small" color="error" onClick={() => handleDeleteClient(client.client_id)}>
-                            <DeleteIcon fontSize="small" />
+                        <Tooltip title={client.status === 'active' ? 'Deactivate Client' : 'Reactivate Client'}>
+                          <IconButton
+                            size="small"
+                            color={client.status === 'active' ? 'error' : 'success'}
+                            onClick={() => handleToggleStatus(client)}
+                          >
+                            {client.status === 'active' ? <DeactivateIcon fontSize="small" /> : <ActivateIcon fontSize="small" />}
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -370,7 +406,7 @@ const ClientManagement = () => {
               helperText="Contact phone number"
             />
             <TextField
-              label="Date Started"
+              label="Start Date"
               fullWidth
               type="date"
               value={formData.date_started}
@@ -379,12 +415,22 @@ const ClientManagement = () => {
               helperText="When the client started using the service"
             />
             <TextField
+              label="End Date"
+              fullWidth
+              type="date"
+              value={formData.end_date}
+              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              helperText="Leave empty for active clients"
+            />
+            <TextField
               select
               label="Status"
               fullWidth
               required
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              helperText="Inactive clients cannot use any features"
             >
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="inactive">Inactive</MenuItem>

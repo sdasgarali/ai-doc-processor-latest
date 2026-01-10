@@ -9,9 +9,8 @@ const AdminPanel = () => {
   const tabs = [
     { label: 'User Management', path: '/app/admin/users' },
     { label: 'Client Management', path: '/app/admin/clients' },
-    { label: 'Doc Category', path: '/app/admin/doc-categories' },
+    { label: 'Categories', path: '/app/admin/categories' },
     { label: 'Output Profiles', path: '/app/admin/output-profiles' },
-    { label: 'Category Creation', path: '/app/admin/category-creation' },
     { label: 'Model Management', path: '/app/admin/model-versions' },
     { label: 'Field Management', path: '/app/admin/fields' },
     { label: 'Permission Management', path: '/app/admin/permissions' },

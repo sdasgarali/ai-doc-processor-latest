@@ -306,7 +306,7 @@ router.post('/clients', verifyToken, checkRole('admin', 'superadmin'), async (re
 // Update client
 router.put('/clients/:clientId', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const { client_name, contact_name, email, phone_no, date_started, status, active_model } = req.body;
+    const { client_name, contact_name, email, phone_no, date_started, end_date, status, active_model } = req.body;
 
     // Check if client exists
     const existingClient = await query('SELECT client_id FROM client WHERE client_id = ?', [req.params.clientId]);
@@ -322,9 +322,10 @@ router.put('/clients/:clientId', verifyToken, checkRole('admin', 'superadmin'), 
     if (contact_name !== undefined) { updates.push('contact_name = ?'); params.push(contact_name); }
     if (email !== undefined) { updates.push('email = ?'); params.push(email); }
     if (phone_no !== undefined) { updates.push('phone_no = ?'); params.push(phone_no); }
-    if (date_started !== undefined) { updates.push('date_started = ?'); params.push(date_started); }
+    if (date_started !== undefined) { updates.push('date_started = ?'); params.push(date_started || null); }
+    if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-    if (active_model !== undefined) { updates.push('active_model = ?'); params.push(active_model); }
+    if (active_model !== undefined) { updates.push('active_model = ?'); params.push(active_model || null); }
 
     if (updates.length === 0) {
       return res.status(400).json({ success: false, message: 'No fields to update.' });
@@ -337,6 +338,48 @@ router.put('/clients/:clientId', verifyToken, checkRole('admin', 'superadmin'), 
   } catch (error) {
     console.error('Update client error:', error);
     res.status(500).json({ success: false, message: 'Error updating client.' });
+  }
+});
+
+// Delete client
+router.delete('/clients/:clientId', verifyToken, checkRole('superadmin'), async (req, res) => {
+  try {
+    const { clientId } = req.params;
+
+    // Check if client exists
+    const existingClient = await query('SELECT client_id, client_name FROM client WHERE client_id = ?', [clientId]);
+    if (existingClient.length === 0) {
+      return res.status(404).json({ success: false, message: 'Client not found.' });
+    }
+
+    // Check if client has associated users
+    const associatedUsers = await query('SELECT COUNT(*) as count FROM user_profile WHERE client_id = ?', [clientId]);
+    if (associatedUsers[0].count > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete client. ${associatedUsers[0].count} user(s) are associated with this client. Please reassign or delete them first.`
+      });
+    }
+
+    // Check if client has processed documents
+    const associatedDocs = await query('SELECT COUNT(*) as count FROM document_processed WHERE client_id = ?', [clientId]);
+    if (associatedDocs[0].count > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete client. ${associatedDocs[0].count} document(s) are associated with this client.`
+      });
+    }
+
+    // Delete associated output profiles first
+    await query('DELETE FROM output_profile WHERE client_id = ?', [clientId]);
+
+    // Delete the client
+    await query('DELETE FROM client WHERE client_id = ?', [clientId]);
+
+    res.json({ success: true, message: 'Client deleted successfully' });
+  } catch (error) {
+    console.error('Delete client error:', error);
+    res.status(500).json({ success: false, message: 'Error deleting client.' });
   }
 });
 

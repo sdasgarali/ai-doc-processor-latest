@@ -60,15 +60,16 @@ router.post('/login', loginLimiter, async (req, res) => {
     );
 
     // Generate JWT token
+    const jwtExpire = process.env.JWT_EXPIRE && process.env.JWT_EXPIRE.trim() ? process.env.JWT_EXPIRE.trim() : '24h';
     const token = jwt.sign(
-      { 
-        userid: user.userid, 
-        email: user.email, 
+      {
+        userid: user.userid,
+        email: user.email,
         role: user.user_role,
         client_id: user.client_id
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
+      { expiresIn: jwtExpire }
     );
 
     // Remove password from response

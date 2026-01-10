@@ -173,3 +173,5 @@ test-*.txt
 # ===========================================
 config/eob-extraction-system-*.json
 GOOGLE_DRIVE_SETUP.md
+.vercel
+.env*.local

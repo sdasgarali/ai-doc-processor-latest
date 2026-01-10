@@ -397,5 +397,96 @@ Completely redesigned landing page from EOB-focused to universal document proces
 
 ---
 
+### 8. Supabase Migration & Vercel Deployment (2026-01-10)
+
+Migrating database from MySQL to Supabase (PostgreSQL) and configuring for Vercel deployment.
+
+#### Database Migration
+
+**PostgreSQL Schema Created** (`database/supabase_schema.sql`)
+- Converted all 33 MySQL tables to PostgreSQL syntax
+- Created ENUM types for status fields
+- Added triggers for automatic `updated_at` updates
+- Configured Row Level Security (RLS)
+- Created necessary indexes
+- Views converted with PostgreSQL syntax
+
+**Database Connection Updated** (`config/database.js`)
+- Supports both MySQL and Supabase
+- Uses Supabase JS client for REST API access (avoids direct connection issues)
+- SQL query parser for SELECT/INSERT/UPDATE/DELETE compatibility
+- Automatic detection based on environment variables
+
+**Supabase Configuration** (`config/supabase.js`)
+- Dedicated Supabase client configuration
+- Query helper with MySQL to PostgreSQL placeholder conversion (`?` to `$1, $2...`)
+
+#### Vercel Configuration
+
+**Serverless Entry Point** (`api/index.js`)
+- Express app wrapper for Vercel serverless functions
+- All routes mounted at `/api/*`
+- Health check endpoint at `/api/health`
+- Error handling and 404 middleware
+
+**Build Configuration** (`vercel.json`)
+```json
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/index.js", "use": "@vercel/node" },
+    { "src": "client/package.json", "use": "@vercel/static-build", "config": { "distDir": "build" } }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.js" },
+    { "src": "/(.*)", "dest": "/client/$1" }
+  ]
+}
+```
+
+**Environment Files**
+- `.env.production` - Production environment template
+- `client/.env.production` - Frontend production config
+
+#### Supabase Project Details
+- Project URL: `https://hzzsunmbnhjfgbloyaan.supabase.co`
+- Database: PostgreSQL 15
+- Region: ap-south-1 (AWS Mumbai)
+
+#### Files Created/Modified
+
+**New Files:**
+- `database/supabase_schema.sql` - PostgreSQL schema
+- `config/supabase.js` - Supabase client configuration
+- `api/index.js` - Vercel serverless entry point
+- `vercel.json` - Vercel build configuration
+- `.env.production` - Production environment template
+- `test-supabase.js` - Connection test script
+
+**Modified Files:**
+- `config/database.js` - Dual MySQL/Supabase support
+
+#### Deployment Steps
+
+1. **Run Schema Migration in Supabase:**
+   - Go to: https://supabase.com/dashboard/project/hzzsunmbnhjfgbloyaan
+   - Click "SQL Editor" in sidebar
+   - Copy contents of `database/supabase_schema.sql`
+   - Click "Run" to execute
+
+2. **Deploy to Vercel:**
+   ```bash
+   vercel
+   ```
+
+3. **Set Environment Variables in Vercel:**
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - JWT_SECRET
+   - GROQ_API_KEY
+   - Other variables from .env.production
+
+---
+
 ## Last Updated
-2026-01-10 - Landing page redesign and client access control features completed
+2026-01-10 - Supabase migration and Vercel deployment configuration

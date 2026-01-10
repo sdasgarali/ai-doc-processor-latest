@@ -1,5 +1,8 @@
 const { stringify } = require('csv-stringify/sync');
 const { query } = require('../config/database');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
+const { Document, Packer, Table, TableRow, TableCell, Paragraph, TextRun, HeadingLevel, BorderStyle } = require('docx');
 
 // Standard EOB field order (first 25 columns) - FALLBACK when no profile
 const STANDARD_FIELDS = [
@@ -594,6 +597,499 @@ async function generateCSVWithProfile(extractedData, metadata, clientId = null) 
 }
 
 /**
+ * Generate Excel (XLSX) output using output profile
+ */
+async function generateXLSXWithProfile(extractedData, metadata, clientId = null) {
+  const profile = clientId && metadata.categoryId
+    ? await getEffectiveProfile(clientId, metadata.categoryId)
+    : null;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'EOB Extraction System';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Extracted Data');
+
+  // Add metadata
+  worksheet.addRow(['Session ID:', metadata.session_id]);
+  worksheet.addRow(['Processing ID:', metadata.processing_id]);
+  worksheet.addRow(['Input File:', metadata.input_file || '']);
+  if (profile) {
+    worksheet.addRow(['Profile:', profile.profile_name]);
+  }
+  worksheet.addRow([]); // Empty row separator
+
+  // Determine fields to use
+  const fields = profile?.fields?.length > 0
+    ? profile.fields
+    : STANDARD_FIELDS.map(f => ({ field_name: f, field_display_name: f }));
+
+  // Add header row with styling
+  const headers = fields.map(f => f.custom_label || f.field_display_name || f.field_name);
+  headers.push('Error');
+  const headerRow = worksheet.addRow(headers);
+
+  // Style header row
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+  });
+
+  // Add data rows
+  if (extractedData.results && Array.isArray(extractedData.results)) {
+    extractedData.results.forEach(record => {
+      const rowData = fields.map(field => {
+        let value = record[field.field_name];
+
+        // Apply default value
+        if ((value === null || value === undefined || value === '') && field.default_value) {
+          value = field.default_value;
+        }
+
+        // Apply transformation
+        if (field.transform_type && field.transform_type !== 'none') {
+          const config = field.transform_config ? JSON.parse(field.transform_config) : {};
+          value = applyTransform(value, field.transform_type, config);
+        }
+
+        // Apply null value
+        if (value === null || value === undefined || value === '') {
+          value = profile?.null_value || '';
+        }
+
+        return value;
+      });
+
+      // Add error column
+      const error = extractedData.errors?.find(e =>
+        e.page === (record.Original_Page_No || record.Page_No)
+      );
+      rowData.push(error ? error.error || error.message || '' : '');
+
+      const dataRow = worksheet.addRow(rowData);
+      dataRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+  }
+
+  // Auto-fit columns
+  worksheet.columns.forEach(column => {
+    let maxLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const columnLength = cell.value ? cell.value.toString().length : 10;
+      if (columnLength > maxLength) {
+        maxLength = columnLength;
+      }
+    });
+    column.width = Math.min(maxLength + 2, 50);
+  });
+
+  // Return buffer
+  return await workbook.xlsx.writeBuffer();
+}
+
+/**
+ * Generate PDF output using output profile
+ */
+async function generatePDFWithProfile(extractedData, metadata, clientId = null) {
+  const profile = clientId && metadata.categoryId
+    ? await getEffectiveProfile(clientId, metadata.categoryId)
+    : null;
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const doc = new PDFDocument({ margin: 50, size: 'A4', layout: 'landscape' });
+
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Title
+    doc.fontSize(18).font('Helvetica-Bold').text('Document Extraction Report', { align: 'center' });
+    doc.moveDown();
+
+    // Metadata
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Session ID: ${metadata.session_id}`);
+    doc.text(`Processing ID: ${metadata.processing_id}`);
+    doc.text(`Input File: ${metadata.input_file || 'N/A'}`);
+    if (profile) {
+      doc.text(`Profile: ${profile.profile_name}`);
+    }
+    doc.text(`Generated: ${new Date().toISOString()}`);
+    doc.moveDown();
+
+    // Determine fields
+    const fields = profile?.fields?.length > 0
+      ? profile.fields
+      : STANDARD_FIELDS.slice(0, 10).map(f => ({ field_name: f, field_display_name: f }));
+
+    // Table header
+    doc.fontSize(8).font('Helvetica-Bold');
+    const headers = fields.map(f => f.custom_label || f.field_display_name || f.field_name);
+
+    // Calculate column widths
+    const pageWidth = doc.page.width - 100;
+    const colWidth = Math.min(pageWidth / headers.length, 100);
+    const startX = 50;
+    let currentY = doc.y;
+
+    // Draw header row
+    headers.forEach((header, i) => {
+      doc.text(header.substring(0, 15), startX + (i * colWidth), currentY, { width: colWidth - 5, align: 'left' });
+    });
+
+    currentY += 15;
+    doc.moveTo(startX, currentY).lineTo(startX + (headers.length * colWidth), currentY).stroke();
+    currentY += 5;
+
+    // Draw data rows
+    doc.font('Helvetica').fontSize(7);
+    if (extractedData.results && Array.isArray(extractedData.results)) {
+      extractedData.results.forEach((record, rowIndex) => {
+        // Check for page break
+        if (currentY > doc.page.height - 100) {
+          doc.addPage();
+          currentY = 50;
+        }
+
+        fields.forEach((field, i) => {
+          let value = record[field.field_name];
+
+          if ((value === null || value === undefined || value === '') && field.default_value) {
+            value = field.default_value;
+          }
+
+          if (field.transform_type && field.transform_type !== 'none') {
+            const config = field.transform_config ? JSON.parse(field.transform_config) : {};
+            value = applyTransform(value, field.transform_type, config);
+          }
+
+          if (value === null || value === undefined || value === '') {
+            value = profile?.null_value || '';
+          }
+
+          const displayValue = String(value).substring(0, 20);
+          doc.text(displayValue, startX + (i * colWidth), currentY, { width: colWidth - 5, align: 'left' });
+        });
+
+        currentY += 12;
+      });
+    }
+
+    // Summary
+    doc.moveDown(2);
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text(`Total Records: ${extractedData.results?.length || 0}`, 50, currentY + 20);
+    doc.text(`Errors: ${extractedData.errors?.length || 0}`);
+
+    doc.end();
+  });
+}
+
+/**
+ * Generate Word (DOCX) output using output profile
+ */
+async function generateDOCXWithProfile(extractedData, metadata, clientId = null) {
+  const profile = clientId && metadata.categoryId
+    ? await getEffectiveProfile(clientId, metadata.categoryId)
+    : null;
+
+  // Determine fields
+  const fields = profile?.fields?.length > 0
+    ? profile.fields
+    : STANDARD_FIELDS.slice(0, 15).map(f => ({ field_name: f, field_display_name: f }));
+
+  const headers = fields.map(f => f.custom_label || f.field_display_name || f.field_name);
+
+  // Build table rows
+  const tableRows = [];
+
+  // Header row
+  tableRows.push(
+    new TableRow({
+      children: headers.map(header =>
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text: header, bold: true, size: 20 })]
+          })],
+          shading: { fill: '4472C4' }
+        })
+      )
+    })
+  );
+
+  // Data rows
+  if (extractedData.results && Array.isArray(extractedData.results)) {
+    extractedData.results.forEach(record => {
+      const rowCells = fields.map(field => {
+        let value = record[field.field_name];
+
+        if ((value === null || value === undefined || value === '') && field.default_value) {
+          value = field.default_value;
+        }
+
+        if (field.transform_type && field.transform_type !== 'none') {
+          const config = field.transform_config ? JSON.parse(field.transform_config) : {};
+          value = applyTransform(value, field.transform_type, config);
+        }
+
+        if (value === null || value === undefined || value === '') {
+          value = profile?.null_value || '';
+        }
+
+        return new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text: String(value), size: 18 })]
+          })]
+        });
+      });
+
+      tableRows.push(new TableRow({ children: rowCells }));
+    });
+  }
+
+  // Create document
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text: 'Document Extraction Report', bold: true, size: 36 })],
+          heading: HeadingLevel.HEADING_1
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `Session ID: ${metadata.session_id}`, size: 22 })]
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `Processing ID: ${metadata.processing_id}`, size: 22 })]
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `Input File: ${metadata.input_file || 'N/A'}`, size: 22 })]
+        }),
+        ...(profile ? [new Paragraph({
+          children: [new TextRun({ text: `Profile: ${profile.profile_name}`, size: 22 })]
+        })] : []),
+        new Paragraph({
+          children: [new TextRun({ text: `Generated: ${new Date().toISOString()}`, size: 22 })]
+        }),
+        new Paragraph({ children: [] }), // Spacer
+        new Table({
+          rows: tableRows,
+          width: { size: 100, type: 'pct' }
+        }),
+        new Paragraph({ children: [] }), // Spacer
+        new Paragraph({
+          children: [
+            new TextRun({ text: `Total Records: ${extractedData.results?.length || 0}`, size: 22, bold: true })
+          ]
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: `Errors: ${extractedData.errors?.length || 0}`, size: 22 })
+          ]
+        })
+      ]
+    }]
+  });
+
+  return await Packer.toBuffer(doc);
+}
+
+/**
+ * Generate plain text (TXT) output using output profile
+ */
+async function generateTXTWithProfile(extractedData, metadata, clientId = null) {
+  const profile = clientId && metadata.categoryId
+    ? await getEffectiveProfile(clientId, metadata.categoryId)
+    : null;
+
+  const lines = [];
+
+  // Header
+  lines.push('=' .repeat(80));
+  lines.push('DOCUMENT EXTRACTION REPORT');
+  lines.push('=' .repeat(80));
+  lines.push('');
+  lines.push(`Session ID:    ${metadata.session_id}`);
+  lines.push(`Processing ID: ${metadata.processing_id}`);
+  lines.push(`Input File:    ${metadata.input_file || 'N/A'}`);
+  if (profile) {
+    lines.push(`Profile:       ${profile.profile_name}`);
+  }
+  lines.push(`Generated:     ${new Date().toISOString()}`);
+  lines.push('');
+  lines.push('-'.repeat(80));
+  lines.push('');
+
+  // Determine fields
+  const fields = profile?.fields?.length > 0
+    ? profile.fields
+    : STANDARD_FIELDS.map(f => ({ field_name: f, field_display_name: f }));
+
+  // Data records
+  if (extractedData.results && Array.isArray(extractedData.results)) {
+    extractedData.results.forEach((record, index) => {
+      lines.push(`RECORD ${index + 1}`);
+      lines.push('-'.repeat(40));
+
+      fields.forEach(field => {
+        let value = record[field.field_name];
+
+        if ((value === null || value === undefined || value === '') && field.default_value) {
+          value = field.default_value;
+        }
+
+        if (field.transform_type && field.transform_type !== 'none') {
+          const config = field.transform_config ? JSON.parse(field.transform_config) : {};
+          value = applyTransform(value, field.transform_type, config);
+        }
+
+        if (value === null || value === undefined || value === '') {
+          value = profile?.null_value || 'N/A';
+        }
+
+        const label = (field.custom_label || field.field_display_name || field.field_name).padEnd(25);
+        lines.push(`${label}: ${value}`);
+      });
+
+      // Check for errors
+      const error = extractedData.errors?.find(e =>
+        e.page === (record.Original_Page_No || record.Page_No)
+      );
+      if (error) {
+        lines.push(`${'Error'.padEnd(25)}: ${error.error || error.message}`);
+      }
+
+      lines.push('');
+    });
+  }
+
+  // Summary
+  lines.push('='.repeat(80));
+  lines.push('SUMMARY');
+  lines.push('='.repeat(80));
+  lines.push(`Total Records: ${extractedData.results?.length || 0}`);
+  lines.push(`Total Errors:  ${extractedData.errors?.length || 0}`);
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate XML output using output profile
+ */
+async function generateXMLWithProfile(extractedData, metadata, clientId = null) {
+  const profile = clientId && metadata.categoryId
+    ? await getEffectiveProfile(clientId, metadata.categoryId)
+    : null;
+
+  const escapeXML = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
+
+  const lines = [];
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<ExtractionReport>');
+  lines.push('  <Metadata>');
+  lines.push(`    <SessionId>${escapeXML(metadata.session_id)}</SessionId>`);
+  lines.push(`    <ProcessingId>${escapeXML(metadata.processing_id)}</ProcessingId>`);
+  lines.push(`    <InputFile>${escapeXML(metadata.input_file || '')}</InputFile>`);
+  if (profile) {
+    lines.push(`    <Profile>${escapeXML(profile.profile_name)}</Profile>`);
+  }
+  lines.push(`    <Generated>${new Date().toISOString()}</Generated>`);
+  lines.push('  </Metadata>');
+
+  // Determine fields
+  const fields = profile?.fields?.length > 0
+    ? profile.fields
+    : STANDARD_FIELDS.map(f => ({ field_name: f, field_display_name: f }));
+
+  lines.push('  <Results>');
+
+  if (extractedData.results && Array.isArray(extractedData.results)) {
+    extractedData.results.forEach((record, index) => {
+      lines.push(`    <Record index="${index + 1}">`);
+
+      fields.forEach(field => {
+        let value = record[field.field_name];
+
+        if ((value === null || value === undefined || value === '') && field.default_value) {
+          value = field.default_value;
+        }
+
+        if (field.transform_type && field.transform_type !== 'none') {
+          const config = field.transform_config ? JSON.parse(field.transform_config) : {};
+          value = applyTransform(value, field.transform_type, config);
+        }
+
+        if (value === null || value === undefined || value === '') {
+          value = profile?.null_value || '';
+        }
+
+        const tagName = field.field_name.replace(/[^a-zA-Z0-9_]/g, '_');
+        lines.push(`      <${tagName}>${escapeXML(value)}</${tagName}>`);
+      });
+
+      // Check for errors
+      const error = extractedData.errors?.find(e =>
+        e.page === (record.Original_Page_No || record.Page_No)
+      );
+      if (error) {
+        lines.push(`      <Error>${escapeXML(error.error || error.message)}</Error>`);
+      }
+
+      lines.push('    </Record>');
+    });
+  }
+
+  lines.push('  </Results>');
+
+  // Errors section
+  if (extractedData.errors && extractedData.errors.length > 0) {
+    lines.push('  <Errors>');
+    extractedData.errors.forEach((error, index) => {
+      lines.push(`    <Error index="${index + 1}">`);
+      lines.push(`      <Page>${error.page || ''}</Page>`);
+      lines.push(`      <Message>${escapeXML(error.error || error.message)}</Message>`);
+      lines.push('    </Error>');
+    });
+    lines.push('  </Errors>');
+  }
+
+  lines.push('  <Summary>');
+  lines.push(`    <TotalRecords>${extractedData.results?.length || 0}</TotalRecords>`);
+  lines.push(`    <TotalErrors>${extractedData.errors?.length || 0}</TotalErrors>`);
+  lines.push('  </Summary>');
+  lines.push('</ExtractionReport>');
+
+  return lines.join('\n');
+}
+
+/**
  * Format output based on profile output_format setting
  */
 async function formatWithProfile(extractedData, metadata, clientId = null) {
@@ -610,6 +1106,46 @@ async function formatWithProfile(extractedData, metadata, clientId = null) {
         data: await generateJSONWithProfile(extractedData, metadata, clientId),
         contentType: 'application/json',
         extension: '.json'
+      };
+    case 'xlsx':
+    case 'excel':
+      return {
+        format: 'xlsx',
+        data: await generateXLSXWithProfile(extractedData, metadata, clientId),
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        extension: '.xlsx',
+        isBinary: true
+      };
+    case 'pdf':
+      return {
+        format: 'pdf',
+        data: await generatePDFWithProfile(extractedData, metadata, clientId),
+        contentType: 'application/pdf',
+        extension: '.pdf',
+        isBinary: true
+      };
+    case 'docx':
+    case 'doc':
+      return {
+        format: 'docx',
+        data: await generateDOCXWithProfile(extractedData, metadata, clientId),
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        extension: '.docx',
+        isBinary: true
+      };
+    case 'txt':
+      return {
+        format: 'txt',
+        data: await generateTXTWithProfile(extractedData, metadata, clientId),
+        contentType: 'text/plain',
+        extension: '.txt'
+      };
+    case 'xml':
+      return {
+        format: 'xml',
+        data: await generateXMLWithProfile(extractedData, metadata, clientId),
+        contentType: 'application/xml',
+        extension: '.xml'
       };
     case 'csv':
     default:
@@ -635,6 +1171,11 @@ module.exports = {
   getEffectiveProfile,
   generateJSONWithProfile,
   generateCSVWithProfile,
+  generateXLSXWithProfile,
+  generatePDFWithProfile,
+  generateDOCXWithProfile,
+  generateTXTWithProfile,
+  generateXMLWithProfile,
   formatWithProfile,
   applyTransform
 };

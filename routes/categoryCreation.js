@@ -103,7 +103,7 @@ router.post('/sample-document', uploadLimiter, verifyToken, checkRole('admin', '
       description || null,
       JSON.stringify(parsedExpectedFields),
       expected_output_format,
-      req.user.userId
+      req.user.userid
     ]);
 
     res.status(201).json({
@@ -404,7 +404,7 @@ router.post('/request', categoryCreationLimiter, verifyToken, checkRole('admin',
         category_description,
         JSON.stringify(parsedExpectedFields),
         expected_output_format,
-        req.user.userId
+        req.user.userid
       ]);
       sampleDocumentId = sampleResult.insertId;
     }
@@ -421,7 +421,7 @@ router.post('/request', categoryCreationLimiter, verifyToken, checkRole('admin',
       JSON.stringify(parsedExpectedFields),
       expected_output_format,
       sampleDocumentId,
-      req.user.userId
+      req.user.userid
     ]);
 
     res.status(201).json({
@@ -773,7 +773,7 @@ router.post('/request/:requestId/approve', verifyToken, checkRole('admin', 'supe
         newCategoryId,
         request.expected_output_format || 'csv',
         `Default output profile for ${request.category_name} documents`,
-        req.user.userId
+        req.user.userid
       ]);
 
       newProfileId = profileResult.insertId;
@@ -816,7 +816,7 @@ router.post('/request/:requestId/approve', verifyToken, checkRole('admin', 'supe
         review_notes || null,
         newCategoryId,
         newProfileId,
-        req.user.userId,
+        req.user.userid,
         requestId
       ]);
     });
@@ -853,7 +853,7 @@ router.post('/request/:requestId/reject', verifyToken, checkRole('admin', 'super
         reviewed_by = ?,
         reviewed_at = NOW()
       WHERE request_id = ?
-    `, [review_notes || 'Request rejected', req.user.userId, requestId]);
+    `, [review_notes || 'Request rejected', req.user.userid, requestId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Category request not found.' });

@@ -42,7 +42,7 @@ class AIService {
             'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile'
+          model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
         };
       case 'local':
       default:
