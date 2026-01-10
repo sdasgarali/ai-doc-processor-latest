@@ -472,7 +472,7 @@ const testimonials = [
     company: 'MedCare Health Systems',
     avatar: 'S',
     rating: 5,
-    quote: 'DocuAI transformed our billing operations. We reduced EOB processing time by 80% and improved accuracy to near-perfect levels.',
+    quote: 'DocuParse transformed our billing operations. We reduced EOB processing time by 80% and improved accuracy to near-perfect levels.',
     industry: 'Healthcare'
   },
   {
@@ -498,8 +498,8 @@ const testimonials = [
 // FAQs
 const faqs = [
   {
-    question: 'What types of documents can DocuAI process?',
-    answer: 'DocuAI handles 100+ document types across industries including healthcare (EOBs, facesheets, claims), finance (invoices, receipts, statements), legal (contracts, filings), HR (resumes, applications), and more. Our AI continuously learns new formats.'
+    question: 'What types of documents can DocuParse process?',
+    answer: 'DocuParse handles 100+ document types across industries including healthcare (EOBs, facesheets, claims), finance (invoices, receipts, statements), legal (contracts, filings), HR (resumes, applications), and more. Our AI continuously learns new formats.'
   },
   {
     question: 'How accurate is the data extraction?',
@@ -1060,7 +1060,7 @@ function LandingPage() {
               color="text.secondary"
               sx={{ maxWidth: 600, mx: 'auto', fontWeight: 400 }}
             >
-              From healthcare to finance, legal to logistics — DocuAI adapts to your industry's
+              From healthcare to finance, legal to logistics — DocuParse adapts to your industry's
               unique document processing needs.
             </Typography>
           </Box>
@@ -1565,7 +1565,7 @@ function LandingPage() {
               Ready to Transform Your Document Processing?
             </Typography>
             <Typography variant="h6" sx={{ mb: 4, opacity: 0.8, fontWeight: 400 }}>
-              Join 2,000+ companies processing millions of documents with DocuAI.
+              Join 2,000+ companies processing millions of documents with DocuParse.
               Start your 14-day free trial today.
             </Typography>
 
@@ -1645,7 +1645,7 @@ function LandingPage() {
                   <AutoAwesomeIcon sx={{ color: 'white', fontSize: 24 }} />
                 </Box>
                 <Typography variant="h5" fontWeight={700}>
-                  DocuAI
+                  DocuParse
                 </Typography>
               </Box>
               <Typography sx={{ opacity: 0.7, mb: 2, maxWidth: 300 }}>
@@ -1689,11 +1689,11 @@ function LandingPage() {
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Contact Us</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, opacity: 0.7 }}>
                 <EmailIcon sx={{ mr: 1.5, fontSize: 18 }} />
-                <Typography>support@docuai.com</Typography>
+                <Typography>support@docuparse.com</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, opacity: 0.7 }}>
                 <PhoneIcon sx={{ mr: 1.5, fontSize: 18 }} />
-                <Typography>1-800-DOCU-AI</Typography>
+                <Typography>1-800-DOCUPARSE</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', opacity: 0.7 }}>
                 <LocationIcon sx={{ mr: 1.5, fontSize: 18 }} />
@@ -1706,7 +1706,7 @@ function LandingPage() {
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
             <Typography sx={{ opacity: 0.5 }}>
-              2026 DocuAI. All rights reserved.
+              2026 DocuParse. All rights reserved.
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
               {['Privacy Policy', 'Terms of Service', 'Security', 'Compliance'].map((item) => (
