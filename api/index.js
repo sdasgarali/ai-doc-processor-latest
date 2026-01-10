@@ -143,6 +143,22 @@ try {
   app.use('/api/category-creation', (req, res) => res.status(500).json({ error: 'Category creation routes failed to load', details: err.message }));
 }
 
+try {
+  const processingConfigRoutes = require('../routes/processingConfig');
+  app.use('/api/processing-config', processingConfigRoutes);
+} catch (err) {
+  console.error('Failed to load processing config routes:', err.message);
+  app.use('/api/processing-config', (req, res) => res.status(500).json({ error: 'Processing config routes failed to load', details: err.message }));
+}
+
+try {
+  const permissionRoutes = require('../routes/permissions');
+  app.use('/api/permissions', permissionRoutes);
+} catch (err) {
+  console.error('Failed to load permission routes:', err.message);
+  app.use('/api/permissions', (req, res) => res.status(500).json({ error: 'Permission routes failed to load', details: err.message }));
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
