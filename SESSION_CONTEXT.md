@@ -9,7 +9,7 @@ All session tasks completed:
 4. Fix any issues found during testing - COMPLETED (rate limiting working correctly)
 5. Prepare detailed test report - COMPLETED (UAT_TEST_REPORT_V2.md)
 6. Client access control & multi-format output - COMPLETED (2026-01-10)
-7. Landing page redesign to universal DocuAI platform - COMPLETED (2026-01-10)
+7. Landing page redesign to universal DocuParse platform - COMPLETED (2026-01-10)
 
 ---
 
@@ -311,12 +311,12 @@ The one "failed" test (XSS login attempt) received 429 status because the rate l
 - Fixed "0" display bug in Output Profile table (JSX conditional rendering)
 - Removed Model column from Documents page
 
-### 7. Landing Page Redesign - Universal DocuAI Platform
+### 7. Landing Page Redesign - Universal DocuParse Platform
 
 Completely redesigned landing page from EOB-focused to universal document processing platform.
 
 #### Rebranding
-- Renamed from "EOB Extract" to "DocuAI"
+- Renamed from "EOB Extract" to "DocuParse"
 - Universal AI-powered document processing platform
 
 #### New Sections
