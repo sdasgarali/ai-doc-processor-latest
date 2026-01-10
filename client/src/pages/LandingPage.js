@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -26,7 +26,10 @@ import {
   ListItem,
   ListItemText,
   Snackbar,
-  Alert
+  Alert,
+  Paper,
+  Tab,
+  Tabs
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -46,114 +49,366 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   LinkedIn as LinkedInIcon,
-  Twitter as TwitterIcon
+  Twitter as TwitterIcon,
+  LocalHospital as HealthcareIcon,
+  Receipt as ReceiptIcon,
+  Description as DocumentIcon,
+  Gavel as LegalIcon,
+  Business as BusinessIcon,
+  AccountBalance as FinanceIcon,
+  Inventory as InventoryIcon,
+  People as HRIcon,
+  TrendingUp as TrendingUpIcon,
+  Bolt as BoltIcon,
+  Hub as IntegrationIcon,
+  Verified as VerifiedIcon,
+  DataObject as DataIcon,
+  AutoGraph as AutoGraphIcon,
+  Layers as LayersIcon,
+  PlayArrow as PlayIcon
 } from '@mui/icons-material';
 
-// Styles
-const styles = {
-  gradientBg: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  },
-  heroSection: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #1a237e 0%, #3949ab 50%, #5c6bc0 100%)',
-    position: 'relative',
-    overflow: 'hidden',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-      opacity: 0.5,
+// CSS Keyframe animations (injected via style tag)
+const injectStyles = () => {
+  const styleId = 'landing-page-animations';
+  if (document.getElementById(styleId)) return;
+
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(2deg); }
     }
-  },
-  floatingCard: {
-    position: 'absolute',
-    borderRadius: 3,
-    background: 'rgba(255,255,255,0.1)',
-    backdropFilter: 'blur(10px)',
-    animation: 'float 6s ease-in-out infinite',
-  },
-  featureCard: {
-    height: '100%',
-    transition: 'all 0.3s ease',
-    border: '1px solid transparent',
-    '&:hover': {
-      transform: 'translateY(-8px)',
-      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-      borderColor: '#667eea',
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
     }
-  },
-  pricingCard: {
-    position: 'relative',
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      transform: 'scale(1.02)',
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -12,
-    right: 20,
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    px: 2,
-    py: 0.5,
-    borderRadius: 2,
-  },
-  statsBox: {
-    textAlign: 'center',
-    p: 3,
-  },
-  testimonialCard: {
-    height: '100%',
-    background: 'linear-gradient(145deg, #ffffff, #f5f5f5)',
-  },
-  ctaSection: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    py: 10,
-  },
-  footer: {
-    background: '#1a237e',
-    color: 'white',
-    py: 6,
-  }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    @keyframes morphBlob {
+      0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+      25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+      50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; }
+      75% { border-radius: 60% 40% 60% 30% / 60% 30% 40% 70%; }
+    }
+    @keyframes countUp {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes ripple {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-float-delayed { animation: float 6s ease-in-out infinite 2s; }
+    .animate-pulse { animation: pulse 3s ease-in-out infinite; }
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradientShift 8s ease infinite;
+    }
+    .animate-slideUp { animation: slideUp 0.8s ease-out forwards; }
+    .animate-scaleIn { animation: scaleIn 0.6s ease-out forwards; }
+    .animate-bounce { animation: bounce 2s ease-in-out infinite; }
+    .animate-shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+    .blob {
+      animation: morphBlob 8s ease-in-out infinite;
+    }
+    .card-hover {
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .card-hover:hover {
+      transform: translateY(-12px) scale(1.02);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .glow {
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .border-gradient {
+      border: 2px solid transparent;
+      background: linear-gradient(white, white) padding-box,
+                  linear-gradient(135deg, #667eea, #764ba2) border-box;
+    }
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.6);
+      animation: float 4s ease-in-out infinite;
+    }
+  `;
+  document.head.appendChild(style);
 };
 
-// Feature data
+// Animated counter component
+const AnimatedCounter = ({ end, duration = 2000, suffix = '', prefix = '' }) => {
+  const [count, setCount] = useState(0);
+  const countRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (countRef.current) observer.observe(countRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTime;
+    const endValue = typeof end === 'number' ? end : parseFloat(end.replace(/[^0-9.]/g, ''));
+
+    const animate = (currentTime) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+
+      setCount(Math.floor(easeOutQuart * endValue));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setCount(endValue);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [isVisible, end, duration]);
+
+  return (
+    <span ref={countRef}>
+      {prefix}{count.toLocaleString()}{suffix}
+    </span>
+  );
+};
+
+// Floating particles component
+const FloatingParticles = () => {
+  const particles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 5}s`,
+    size: Math.random() * 4 + 2,
+    duration: `${Math.random() * 4 + 4}s`
+  }));
+
+  return (
+    <>
+      {particles.map((p) => (
+        <Box
+          key={p.id}
+          className="particle"
+          sx={{
+            left: p.left,
+            top: p.top,
+            width: p.size,
+            height: p.size,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            opacity: 0.4
+          }}
+        />
+      ))}
+    </>
+  );
+};
+
+// Industry use cases data
+const industries = [
+  {
+    icon: <HealthcareIcon sx={{ fontSize: 40 }} />,
+    name: 'Healthcare',
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    documents: ['EOB Documents', 'Facesheet Records', 'Medical Claims', 'Patient Forms'],
+    stats: '40% faster claims processing',
+    description: 'Automate extraction from EOBs, facesheets, and medical claims with HIPAA-compliant processing.'
+  },
+  {
+    icon: <FinanceIcon sx={{ fontSize: 40 }} />,
+    name: 'Finance',
+    color: '#3b82f6',
+    gradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    documents: ['Invoices', 'Receipts', 'Bank Statements', 'Tax Documents'],
+    stats: '95% accuracy on invoices',
+    description: 'Extract line items, totals, and vendor details from financial documents automatically.'
+  },
+  {
+    icon: <LegalIcon sx={{ fontSize: 40 }} />,
+    name: 'Legal',
+    color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+    documents: ['Contracts', 'Legal Filings', 'Court Documents', 'NDAs'],
+    stats: '70% reduction in review time',
+    description: 'Parse complex legal documents, extract key clauses, dates, and party information.'
+  },
+  {
+    icon: <HRIcon sx={{ fontSize: 40 }} />,
+    name: 'Human Resources',
+    color: '#f59e0b',
+    gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    documents: ['Resumes', 'Applications', 'Onboarding Forms', 'Timesheets'],
+    stats: '60% faster onboarding',
+    description: 'Streamline HR workflows with automated document processing and data extraction.'
+  },
+  {
+    icon: <InventoryIcon sx={{ fontSize: 40 }} />,
+    name: 'Supply Chain',
+    color: '#ef4444',
+    gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    documents: ['Shipping Labels', 'Packing Slips', 'BOL', 'Customs Forms'],
+    stats: '50% faster processing',
+    description: 'Automate logistics document processing for faster shipment handling and tracking.'
+  },
+  {
+    icon: <BusinessIcon sx={{ fontSize: 40 }} />,
+    name: 'Insurance',
+    color: '#06b6d4',
+    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+    documents: ['Claims', 'Policies', 'Certificates', 'Loss Reports'],
+    stats: '80% automation rate',
+    description: 'Process insurance documents faster with intelligent data extraction and validation.'
+  }
+];
+
+// Features with enhanced descriptions
 const features = [
   {
-    icon: <AIIcon sx={{ fontSize: 50, color: '#667eea' }} />,
-    title: 'AI-Powered Extraction',
-    description: 'Advanced machine learning algorithms extract data from EOBs with 99% accuracy, reducing manual data entry by 95%.'
+    icon: <AIIcon sx={{ fontSize: 50 }} />,
+    title: 'Multi-Model AI Engine',
+    description: 'Powered by Google Document AI and OpenAI GPT-4 for unparalleled accuracy across any document type.',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    stats: '99.2% accuracy'
   },
   {
-    icon: <SpeedIcon sx={{ fontSize: 50, color: '#764ba2' }} />,
-    title: 'Lightning Fast Processing',
-    description: 'Process hundreds of documents per minute. Our optimized pipeline handles large volumes effortlessly.'
+    icon: <BoltIcon sx={{ fontSize: 50 }} />,
+    title: 'Lightning Processing',
+    description: 'Process thousands of pages per hour with our optimized parallel processing pipeline.',
+    gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+    stats: '< 3 sec/page'
   },
   {
-    icon: <SecurityIcon sx={{ fontSize: 50, color: '#3949ab' }} />,
+    icon: <SecurityIcon sx={{ fontSize: 50 }} />,
     title: 'Enterprise Security',
-    description: 'Bank-level encryption, HIPAA compliant, SOC 2 certified. Your healthcare data is protected at all times.'
+    description: 'Bank-level encryption, HIPAA & SOC 2 compliant. Your data never leaves secure infrastructure.',
+    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    stats: '100% compliant'
   },
   {
-    icon: <CloudIcon sx={{ fontSize: 50, color: '#5c6bc0' }} />,
-    title: 'Cloud-Native Platform',
-    description: 'Access your data anywhere, anytime. Automatic backups and 99.9% uptime guarantee.'
+    icon: <IntegrationIcon sx={{ fontSize: 50 }} />,
+    title: 'Universal Integration',
+    description: 'REST APIs, webhooks, and pre-built connectors for ERP, CRM, and accounting systems.',
+    gradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    stats: '50+ integrations'
   },
   {
-    icon: <AnalyticsIcon sx={{ fontSize: 50, color: '#7e57c2' }} />,
-    title: 'Powerful Analytics',
-    description: 'Real-time dashboards, custom reports, and actionable insights to optimize your revenue cycle.'
+    icon: <AutoGraphIcon sx={{ fontSize: 50 }} />,
+    title: 'Smart Analytics',
+    description: 'Real-time dashboards, trend analysis, and actionable insights to optimize your workflows.',
+    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+    stats: 'Real-time insights'
   },
   {
-    icon: <MoneyIcon sx={{ fontSize: 50, color: '#26a69a' }} />,
-    title: 'Automated Billing',
-    description: 'Generate invoices automatically, track payments, and integrate with your accounting systems.'
+    icon: <LayersIcon sx={{ fontSize: 50 }} />,
+    title: 'Custom Output Profiles',
+    description: 'Configure output formats, field mappings, and transformations for each document type.',
+    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+    stats: 'Fully customizable'
+  }
+];
+
+// Stats with animated counters
+const stats = [
+  { value: 50, suffix: 'M+', label: 'Documents Processed', icon: <DocumentIcon /> },
+  { value: 99.2, suffix: '%', label: 'Extraction Accuracy', icon: <VerifiedIcon /> },
+  { value: 2000, suffix: '+', label: 'Enterprise Clients', icon: <BusinessIcon /> },
+  { value: 85, suffix: '%', label: 'Time Saved', icon: <TrendingUpIcon /> }
+];
+
+// Processing workflow steps
+const workflowSteps = [
+  {
+    step: 1,
+    title: 'Upload Any Document',
+    description: 'Drag & drop PDFs, images, or connect cloud storage. We handle 100+ document types.',
+    icon: <UploadIcon sx={{ fontSize: 36 }} />,
+    color: '#3b82f6'
+  },
+  {
+    step: 2,
+    title: 'AI Extracts Data',
+    description: 'Our multi-model AI identifies document type and extracts structured data fields.',
+    icon: <AIIcon sx={{ fontSize: 36 }} />,
+    color: '#8b5cf6'
+  },
+  {
+    step: 3,
+    title: 'Validate & Transform',
+    description: 'Automatic validation, data enrichment, and transformation to your desired format.',
+    icon: <DataIcon sx={{ fontSize: 36 }} />,
+    color: '#10b981'
+  },
+  {
+    step: 4,
+    title: 'Export & Integrate',
+    description: 'Get JSON, CSV, Excel, or push directly to your systems via API or webhooks.',
+    icon: <ReportIcon sx={{ fontSize: 36 }} />,
+    color: '#f59e0b'
   }
 ];
 
@@ -162,44 +417,50 @@ const pricingTiers = [
   {
     name: 'Starter',
     price: 99,
-    description: 'Perfect for small practices',
+    description: 'For small teams getting started',
     features: [
-      '100 documents/month',
+      '500 pages/month',
       '5 users',
+      '3 document types',
       'Email support',
       'Basic analytics',
       'API access'
     ],
-    popular: false
+    popular: false,
+    gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
   },
   {
     name: 'Professional',
-    price: 299,
-    description: 'For growing organizations',
+    price: 399,
+    description: 'For growing businesses',
     features: [
-      '1,000 documents/month',
+      '5,000 pages/month',
       '25 users',
+      'All document types',
       'Priority support',
       'Advanced analytics',
       'Custom integrations',
-      'White-label options'
+      'Custom output profiles'
     ],
-    popular: true
+    popular: true,
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   },
   {
     name: 'Enterprise',
     price: 'Custom',
-    description: 'For large healthcare systems',
+    description: 'For large organizations',
     features: [
-      'Unlimited documents',
+      'Unlimited pages',
       'Unlimited users',
-      '24/7 dedicated support',
       'Custom AI models',
-      'On-premise deployment',
+      '24/7 dedicated support',
+      'On-premise option',
       'SLA guarantee',
-      'HIPAA BAA included'
+      'HIPAA BAA included',
+      'Custom development'
     ],
-    popular: false
+    popular: false,
+    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
   }
 ];
 
@@ -211,60 +472,55 @@ const testimonials = [
     company: 'MedCare Health Systems',
     avatar: 'S',
     rating: 5,
-    quote: 'EOB Extract transformed our billing operations. We reduced processing time by 80% and improved accuracy to near-perfect levels.'
+    quote: 'DocuAI transformed our billing operations. We reduced EOB processing time by 80% and improved accuracy to near-perfect levels.',
+    industry: 'Healthcare'
   },
   {
     name: 'Michael Chen',
-    role: 'Director of Operations',
-    company: 'Pacific Medical Group',
+    role: 'CFO',
+    company: 'Pacific Financial Group',
     avatar: 'M',
     rating: 5,
-    quote: 'The AI accuracy is remarkable. What used to take our team days now happens in minutes. ROI was achieved in just 2 months.'
+    quote: 'Processing 10,000+ invoices monthly is now effortless. The accuracy and speed are remarkable. ROI achieved in just 6 weeks.',
+    industry: 'Finance'
   },
   {
     name: 'Jennifer Williams',
-    role: 'Billing Manager',
-    company: 'HealthFirst Clinic',
+    role: 'Legal Operations Director',
+    company: 'Morrison & Associates',
     avatar: 'J',
     rating: 5,
-    quote: 'Outstanding support team and intuitive interface. Even our non-technical staff adapted quickly. Highly recommended!'
+    quote: 'Contract review time dropped by 70%. The AI accurately extracts clauses and key terms that used to take hours to find manually.',
+    industry: 'Legal'
   }
 ];
 
 // FAQs
 const faqs = [
   {
-    question: 'What types of documents can EOB Extract process?',
-    answer: 'EOB Extract processes all major insurance EOB formats including Medicare, Medicaid, and commercial payers. Our AI continuously learns new formats to expand coverage.'
+    question: 'What types of documents can DocuAI process?',
+    answer: 'DocuAI handles 100+ document types across industries including healthcare (EOBs, facesheets, claims), finance (invoices, receipts, statements), legal (contracts, filings), HR (resumes, applications), and more. Our AI continuously learns new formats.'
   },
   {
     question: 'How accurate is the data extraction?',
-    answer: 'Our AI achieves 99%+ accuracy on structured EOBs. Each extraction includes a confidence score, and our validation engine catches potential errors before they affect your workflow.'
+    answer: 'Our multi-model AI achieves 99%+ accuracy on structured documents and 95%+ on complex unstructured documents. Each extraction includes confidence scores, and our validation engine catches potential errors automatically.'
   },
   {
-    question: 'Is my data secure and HIPAA compliant?',
-    answer: 'Absolutely. We maintain HIPAA compliance with full encryption at rest and in transit. We offer Business Associate Agreements (BAA) and are SOC 2 Type II certified.'
+    question: 'Is my data secure and compliant?',
+    answer: 'Absolutely. We maintain HIPAA, SOC 2 Type II, and GDPR compliance with full encryption at rest and in transit. We offer Business Associate Agreements (BAA) and can deploy on-premise for maximum security.'
+  },
+  {
+    question: 'How does custom output profile work?',
+    answer: 'Output profiles let you configure exactly how extracted data is formatted and delivered. Define field mappings, transformations, date formats, and choose output types (JSON, CSV, Excel, XML) per document category and client.'
   },
   {
     question: 'Can I integrate with my existing systems?',
-    answer: 'Yes! We offer REST APIs, webhooks, and pre-built integrations with major practice management and EHR systems including Epic, Cerner, and Athena.'
-  },
-  {
-    question: 'What kind of support do you offer?',
-    answer: 'All plans include email support. Professional plans get priority response times, and Enterprise clients receive 24/7 dedicated support with a named account manager.'
+    answer: 'Yes! We offer REST APIs, webhooks, and pre-built integrations with major platforms including Salesforce, SAP, Oracle, Epic, Cerner, QuickBooks, and 50+ more. Custom integrations available for Enterprise plans.'
   },
   {
     question: 'Is there a free trial?',
-    answer: 'Yes! We offer a 14-day free trial with full access to all features. No credit card required. Our team will help you get started with a personalized demo.'
+    answer: 'Yes! Start with a 14-day free trial with full feature access. No credit card required. Our team provides personalized onboarding to help you process your first documents within minutes.'
   }
-];
-
-// Stats
-const stats = [
-  { value: '10M+', label: 'Documents Processed' },
-  { value: '99.2%', label: 'Accuracy Rate' },
-  { value: '500+', label: 'Healthcare Clients' },
-  { value: '85%', label: 'Time Saved' }
 ];
 
 function LandingPage() {
@@ -274,6 +530,19 @@ function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [activeIndustry, setActiveIndustry] = useState(0);
+
+  useEffect(() => {
+    injectStyles();
+  }, []);
+
+  // Auto-rotate industries
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndustry((prev) => (prev + 1) % industries.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleDemoRequest = (e) => {
     e.preventDefault();
@@ -289,31 +558,68 @@ function LandingPage() {
   };
 
   return (
-    <Box>
+    <Box sx={{ overflowX: 'hidden' }}>
       {/* Navigation */}
-      <AppBar position="fixed" elevation={0} sx={{ background: 'rgba(26, 35, 126, 0.95)', backdropFilter: 'blur(10px)' }}>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          background: 'rgba(15, 23, 42, 0.9)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}
+      >
         <Container maxWidth="lg">
-          <Toolbar disableGutters>
-            <Typography variant="h5" sx={{ fontWeight: 700, flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-              <AutoAwesomeIcon sx={{ mr: 1 }} />
-              EOB Extract
-            </Typography>
+          <Toolbar disableGutters sx={{ py: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 1.5
+                }}
+              >
+                <AutoAwesomeIcon sx={{ color: 'white', fontSize: 24 }} />
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
+                Docu<span className="text-gradient">AI</span>
+              </Typography>
+            </Box>
 
             {isMobile ? (
               <IconButton color="inherit" onClick={() => setMobileMenuOpen(true)}>
                 <MenuIcon />
               </IconButton>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Button color="inherit" onClick={() => scrollToSection('features')}>Features</Button>
-                <Button color="inherit" onClick={() => scrollToSection('pricing')}>Pricing</Button>
-                <Button color="inherit" onClick={() => scrollToSection('testimonials')}>Testimonials</Button>
-                <Button color="inherit" onClick={() => scrollToSection('faq')}>FAQ</Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {['Industries', 'Features', 'Pricing', 'Testimonials'].map((item) => (
+                  <Button
+                    key={item}
+                    color="inherit"
+                    onClick={() => scrollToSection(item.toLowerCase())}
+                    sx={{
+                      color: 'rgba(255,255,255,0.8)',
+                      '&:hover': { color: 'white', background: 'rgba(255,255,255,0.1)' }
+                    }}
+                  >
+                    {item}
+                  </Button>
+                ))}
                 <Button
                   variant="outlined"
                   color="inherit"
                   onClick={() => navigate('/login')}
-                  sx={{ borderRadius: 2 }}
+                  sx={{
+                    borderRadius: 2,
+                    ml: 2,
+                    borderColor: 'rgba(255,255,255,0.3)',
+                    '&:hover': { borderColor: 'white', background: 'rgba(255,255,255,0.1)' }
+                  }}
                 >
                   Login
                 </Button>
@@ -323,10 +629,15 @@ function LandingPage() {
                   sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     borderRadius: 2,
-                    px: 3
+                    px: 3,
+                    fontWeight: 600,
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                    '&:hover': {
+                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                    }
                   }}
                 >
-                  Get Started
+                  Start Free Trial
                 </Button>
               </Box>
             )}
@@ -336,160 +647,389 @@ function LandingPage() {
 
       {/* Mobile Menu */}
       <Drawer anchor="right" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)}>
-        <List sx={{ width: 250, pt: 4 }}>
-          <ListItem button onClick={() => scrollToSection('features')}>
-            <ListItemText primary="Features" />
-          </ListItem>
-          <ListItem button onClick={() => scrollToSection('pricing')}>
-            <ListItemText primary="Pricing" />
-          </ListItem>
-          <ListItem button onClick={() => scrollToSection('testimonials')}>
-            <ListItemText primary="Testimonials" />
-          </ListItem>
-          <ListItem button onClick={() => scrollToSection('faq')}>
-            <ListItemText primary="FAQ" />
-          </ListItem>
-          <Divider sx={{ my: 2 }} />
-          <ListItem button onClick={() => navigate('/login')}>
-            <ListItemText primary="Login" />
-          </ListItem>
-          <ListItem>
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={() => scrollToSection('cta')}
-              sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-            >
-              Get Started
-            </Button>
-          </ListItem>
-        </List>
+        <Box sx={{ width: 280, pt: 4, px: 2, background: '#0f172a', height: '100%' }}>
+          <List>
+            {['Industries', 'Features', 'Pricing', 'Testimonials', 'FAQ'].map((item) => (
+              <ListItem
+                button
+                key={item}
+                onClick={() => scrollToSection(item.toLowerCase())}
+                sx={{ color: 'white', borderRadius: 2, mb: 1 }}
+              >
+                <ListItemText primary={item} />
+              </ListItem>
+            ))}
+            <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
+            <ListItem button onClick={() => navigate('/login')} sx={{ color: 'white', borderRadius: 2 }}>
+              <ListItemText primary="Login" />
+            </ListItem>
+            <ListItem sx={{ mt: 2 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => scrollToSection('cta')}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: 2,
+                  py: 1.5
+                }}
+              >
+                Start Free Trial
+              </Button>
+            </ListItem>
+          </List>
+        </Box>
       </Drawer>
 
       {/* Hero Section */}
-      <Box sx={styles.heroSection}>
-        <Container maxWidth="lg" sx={{ pt: 15, pb: 10, position: 'relative', zIndex: 1 }}>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        {/* Animated background elements */}
+        <FloatingParticles />
+
+        {/* Gradient orbs */}
+        <Box
+          className="blob animate-pulse"
+          sx={{
+            position: 'absolute',
+            top: '10%',
+            right: '10%',
+            width: { xs: 200, md: 400 },
+            height: { xs: 200, md: 400 },
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)',
+            filter: 'blur(60px)',
+            zIndex: 0
+          }}
+        />
+        <Box
+          className="blob animate-pulse"
+          sx={{
+            position: 'absolute',
+            bottom: '20%',
+            left: '5%',
+            width: { xs: 150, md: 300 },
+            height: { xs: 150, md: 300 },
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
+            filter: 'blur(60px)',
+            zIndex: 0,
+            animationDelay: '2s'
+          }}
+        />
+
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, pt: 12, pb: 8 }}>
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Chip
-                label="Now with GPT-4 Integration"
-                sx={{ mb: 3, background: 'rgba(255,255,255,0.2)', color: 'white' }}
-              />
-              <Typography
-                variant="h1"
-                sx={{
-                  fontWeight: 800,
-                  color: 'white',
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
-                  lineHeight: 1.2,
-                  mb: 3
-                }}
-              >
-                Transform Your EOB Processing with AI
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{ color: 'rgba(255,255,255,0.9)', mb: 4, lineHeight: 1.7 }}
-              >
-                Automate the extraction of critical data from Explanation of Benefits documents.
-                Reduce manual work by 95%, improve accuracy to 99%, and accelerate your revenue cycle.
-              </Typography>
-
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={() => scrollToSection('cta')}
-                  endIcon={<ArrowIcon />}
+              <Box className="animate-slideUp">
+                <Chip
+                  icon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />}
+                  label="Powered by Google AI & GPT-4"
                   sx={{
-                    background: 'white',
-                    color: '#1a237e',
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    '&:hover': { background: '#f5f5f5' }
+                    mb: 3,
+                    background: 'rgba(102, 126, 234, 0.2)',
+                    color: '#a5b4fc',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    fontWeight: 500,
+                    '& .MuiChip-icon': { color: '#a5b4fc' }
                   }}
-                >
-                  Start Free Trial
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => scrollToSection('features')}
+                />
+                <Typography
+                  variant="h1"
                   sx={{
-                    borderColor: 'white',
+                    fontWeight: 800,
                     color: 'white',
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 2,
-                    '&:hover': { borderColor: 'white', background: 'rgba(255,255,255,0.1)' }
+                    fontSize: { xs: '2.5rem', sm: '3rem', md: '3.75rem' },
+                    lineHeight: 1.1,
+                    mb: 3,
+                    letterSpacing: '-0.02em'
                   }}
                 >
-                  See How It Works
-                </Button>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {['No credit card required', 'Setup in 5 minutes', 'Cancel anytime'].map((text) => (
-                  <Box key={text} sx={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.8)' }}>
-                    <CheckIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                    <Typography variant="body2">{text}</Typography>
+                  Universal AI
+                  <Box
+                    component="span"
+                    className="text-gradient"
+                    sx={{ display: 'block' }}
+                  >
+                    Document Processing
                   </Box>
-                ))}
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: 'rgba(255,255,255,0.7)',
+                    mb: 4,
+                    lineHeight: 1.8,
+                    fontSize: { xs: '1rem', md: '1.125rem' },
+                    maxWidth: 520
+                  }}
+                >
+                  Transform any document into structured data in seconds.
+                  From healthcare EOBs to financial invoices, legal contracts to HR forms —
+                  our AI handles it all with 99% accuracy.
+                </Typography>
+
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={() => scrollToSection('cta')}
+                    endIcon={<ArrowIcon />}
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                      '&:hover': {
+                        boxShadow: '0 6px 30px rgba(102, 126, 234, 0.6)',
+                        transform: 'translateY(-2px)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Start Free Trial
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<PlayIcon />}
+                    onClick={() => scrollToSection('how-it-works')}
+                    sx={{
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      color: 'white',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontWeight: 500,
+                      '&:hover': {
+                        borderColor: 'white',
+                        background: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Watch Demo
+                  </Button>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {['No credit card required', 'Setup in 5 minutes', '14-day free trial'].map((text, i) => (
+                    <Box
+                      key={text}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: 'rgba(255,255,255,0.6)'
+                      }}
+                      className="animate-slideUp"
+                      style={{ animationDelay: `${0.2 + i * 0.1}s` }}
+                    >
+                      <CheckIcon sx={{ fontSize: 18, mr: 0.5, color: '#10b981' }} />
+                      <Typography variant="body2">{text}</Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Box sx={{
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: 4,
-                p: 4,
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
-                {/* How it Works Steps */}
-                {[
-                  { icon: <UploadIcon />, title: '1. Upload Documents', desc: 'Drag & drop PDFs or connect to your existing systems' },
-                  { icon: <AIIcon />, title: '2. AI Extraction', desc: 'Our AI processes and extracts all relevant data fields' },
-                  { icon: <ReportIcon />, title: '3. Export & Integrate', desc: 'Get structured data in your preferred format' }
-                ].map((step, i) => (
-                  <Box key={i} sx={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    mb: i < 2 ? 3 : 0,
-                    color: 'white'
-                  }}>
-                    <Box sx={{
-                      background: 'rgba(255,255,255,0.2)',
-                      borderRadius: 2,
-                      p: 1.5,
-                      mr: 2,
-                      display: 'flex'
-                    }}>
-                      {step.icon}
+              <Box
+                className="animate-scaleIn"
+                sx={{
+                  position: 'relative',
+                  perspective: '1000px'
+                }}
+              >
+                {/* Document processing visualization */}
+                <Paper
+                  elevation={0}
+                  sx={{
+                    background: 'rgba(255,255,255,0.05)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 4,
+                    p: 4,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)', className: 'animate-shimmer' }} />
+
+                  <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 3, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Processing Documents Across Industries
+                  </Typography>
+
+                  {/* Industry tabs with auto-rotation */}
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
+                      {industries.slice(0, 4).map((industry, i) => (
+                        <Chip
+                          key={industry.name}
+                          label={industry.name}
+                          onClick={() => setActiveIndustry(i)}
+                          sx={{
+                            background: activeIndustry === i ? industry.gradient : 'rgba(255,255,255,0.1)',
+                            color: 'white',
+                            fontWeight: 500,
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
+                            '&:hover': { transform: 'scale(1.05)' }
+                          }}
+                        />
+                      ))}
                     </Box>
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>{step.title}</Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>{step.desc}</Typography>
+
+                    {/* Active industry details */}
+                    <Box
+                      key={activeIndustry}
+                      className="animate-slideUp"
+                      sx={{
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: 2,
+                        p: 2.5,
+                        border: `1px solid ${industries[activeIndustry].color}30`
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{
+                          color: industries[activeIndustry].color,
+                          mr: 1.5,
+                          display: 'flex'
+                        }}>
+                          {industries[activeIndustry].icon}
+                        </Box>
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+                          {industries[activeIndustry].name}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 2 }}>
+                        {industries[activeIndustry].description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {industries[activeIndustry].documents.map((doc) => (
+                          <Chip
+                            key={doc}
+                            label={doc}
+                            size="small"
+                            sx={{
+                              background: 'rgba(255,255,255,0.1)',
+                              color: 'rgba(255,255,255,0.8)',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                      <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: industries[activeIndustry].color,
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <TrendingUpIcon sx={{ fontSize: 18, mr: 0.5 }} />
+                          {industries[activeIndustry].stats}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
-                ))}
+
+                  {/* Stats row */}
+                  <Grid container spacing={2}>
+                    {[
+                      { label: 'Document Types', value: '100+' },
+                      { label: 'Accuracy', value: '99.2%' },
+                      { label: 'Avg. Time', value: '<3s' }
+                    ].map((stat) => (
+                      <Grid item xs={4} key={stat.label}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+                            {stat.value}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                            {stat.label}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
               </Box>
             </Grid>
           </Grid>
         </Container>
+
+        {/* Scroll indicator */}
+        <Box
+          className="animate-bounce"
+          sx={{
+            position: 'absolute',
+            bottom: 30,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.5)',
+            cursor: 'pointer'
+          }}
+          onClick={() => scrollToSection('stats')}
+        >
+          <ExpandMoreIcon sx={{ fontSize: 32 }} />
+        </Box>
       </Box>
 
       {/* Stats Section */}
-      <Box sx={{ background: '#f8f9fa', py: 6 }}>
+      <Box
+        id="stats"
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          py: 8,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
         <Container maxWidth="lg">
           <Grid container spacing={4}>
-            {stats.map((stat) => (
+            {stats.map((stat, i) => (
               <Grid item xs={6} md={3} key={stat.label}>
-                <Box sx={styles.statsBox}>
-                  <Typography variant="h3" fontWeight={800} color="primary">{stat.value}</Typography>
-                  <Typography variant="body1" color="text.secondary">{stat.label}</Typography>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    p: 3,
+                    borderRadius: 3,
+                    background: 'rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  className="card-hover"
+                >
+                  <Box sx={{ color: 'rgba(255,255,255,0.8)', mb: 1 }}>
+                    {stat.icon}
+                  </Box>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: 'white',
+                      fontSize: { xs: '2rem', md: '2.5rem' }
+                    }}
+                  >
+                    <AnimatedCounter
+                      end={stat.value}
+                      suffix={stat.suffix}
+                      duration={2000 + i * 200}
+                    />
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                    {stat.label}
+                  </Typography>
                 </Box>
               </Grid>
             ))}
@@ -497,29 +1037,100 @@ function LandingPage() {
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Box id="features" sx={{ py: 10 }}>
+      {/* Industries Section */}
+      <Box id="industries" sx={{ py: 12, background: '#f8fafc' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography variant="h2" fontWeight={700} gutterBottom>
-              Powerful Features for Modern Healthcare
+            <Chip
+              label="Multi-Industry Solution"
+              sx={{ mb: 2, background: 'rgba(102, 126, 234, 0.1)', color: '#667eea' }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              One Platform, <span className="text-gradient">Every Industry</span>
             </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Everything you need to streamline EOB processing and accelerate your revenue cycle management.
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{ maxWidth: 600, mx: 'auto', fontWeight: 400 }}
+            >
+              From healthcare to finance, legal to logistics — DocuAI adapts to your industry's
+              unique document processing needs.
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
-            {features.map((feature) => (
-              <Grid item xs={12} md={4} key={feature.title}>
-                <Card sx={styles.featureCard} elevation={0}>
-                  <CardContent sx={{ p: 4, textAlign: 'center' }}>
-                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                    <Typography variant="h5" fontWeight={600} gutterBottom>
-                      {feature.title}
+          <Grid container spacing={3}>
+            {industries.map((industry, index) => (
+              <Grid item xs={12} sm={6} md={4} key={industry.name}>
+                <Card
+                  className="card-hover"
+                  sx={{
+                    height: '100%',
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    overflow: 'visible',
+                    position: 'relative'
+                  }}
+                  elevation={0}
+                >
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: -20,
+                      left: 24,
+                      width: 56,
+                      height: 56,
+                      borderRadius: 2,
+                      background: industry.gradient,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      boxShadow: `0 8px 20px ${industry.color}40`
+                    }}
+                  >
+                    {industry.icon}
+                  </Box>
+                  <CardContent sx={{ pt: 6, pb: 3, px: 3 }}>
+                    <Typography variant="h5" fontWeight={700} gutterBottom sx={{ mt: 1 }}>
+                      {industry.name}
                     </Typography>
-                    <Typography color="text.secondary">
-                      {feature.description}
+                    <Typography color="text.secondary" sx={{ mb: 2, minHeight: 60 }}>
+                      {industry.description}
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                      {industry.documents.slice(0, 3).map((doc) => (
+                        <Chip
+                          key={doc}
+                          label={doc}
+                          size="small"
+                          sx={{
+                            background: `${industry.color}10`,
+                            color: industry.color,
+                            fontSize: '0.7rem',
+                            height: 24
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: industry.color,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      {industry.stats}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -529,15 +1140,210 @@ function LandingPage() {
         </Container>
       </Box>
 
-      {/* Pricing Section */}
-      <Box id="pricing" sx={{ py: 10, background: '#f8f9fa' }}>
+      {/* How It Works Section */}
+      <Box id="how-it-works" sx={{ py: 12, background: 'white' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography variant="h2" fontWeight={700} gutterBottom>
-              Simple, Transparent Pricing
+            <Chip
+              label="Simple Workflow"
+              sx={{ mb: 2, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              From Document to Data in <span className="text-gradient">Seconds</span>
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Choose the plan that fits your needs. All plans include a 14-day free trial.
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{ maxWidth: 600, mx: 'auto', fontWeight: 400 }}
+            >
+              Our streamlined 4-step process turns any document into actionable structured data.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
+            {workflowSteps.map((step, index) => (
+              <Grid item xs={12} sm={6} md={3} key={step.step}>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    position: 'relative'
+                  }}
+                >
+                  {/* Connector line */}
+                  {index < workflowSteps.length - 1 && !isMobile && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 40,
+                        left: '60%',
+                        width: '80%',
+                        height: 2,
+                        background: `linear-gradient(90deg, ${step.color}, ${workflowSteps[index + 1].color})`,
+                        opacity: 0.3,
+                        zIndex: 0
+                      }}
+                    />
+                  )}
+
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      background: `${step.color}15`,
+                      border: `3px solid ${step.color}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: step.color,
+                      mx: 'auto',
+                      mb: 3,
+                      position: 'relative',
+                      zIndex: 1
+                    }}
+                    className="card-hover"
+                  >
+                    {step.icon}
+                  </Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: step.color,
+                      fontWeight: 700,
+                      letterSpacing: 2
+                    }}
+                  >
+                    Step {step.step}
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    {step.title}
+                  </Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    {step.description}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Box id="features" sx={{ py: 12, background: '#0f172a' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Chip
+              label="Powerful Features"
+              sx={{ mb: 2, background: 'rgba(102, 126, 234, 0.2)', color: '#a5b4fc' }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                color: 'white',
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              Enterprise-Grade <span className="text-gradient">AI Processing</span>
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'rgba(255,255,255,0.6)',
+                maxWidth: 600,
+                mx: 'auto',
+                fontWeight: 400
+              }}
+            >
+              Everything you need to automate document processing at scale.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
+            {features.map((feature, index) => (
+              <Grid item xs={12} md={4} key={feature.title}>
+                <Card
+                  className="card-hover"
+                  sx={{
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.03)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 3
+                  }}
+                  elevation={0}
+                >
+                  <CardContent sx={{ p: 4 }}>
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 2,
+                        background: feature.gradient,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        mb: 3,
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      {feature.icon}
+                    </Box>
+                    <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: 'white' }}>
+                      {feature.title}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
+                      {feature.description}
+                    </Typography>
+                    <Chip
+                      label={feature.stats}
+                      size="small"
+                      sx={{
+                        background: 'rgba(255,255,255,0.1)',
+                        color: 'rgba(255,255,255,0.8)'
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Pricing Section */}
+      <Box id="pricing" sx={{ py: 12, background: '#f8fafc' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Chip
+              label="Simple Pricing"
+              sx={{ mb: 2, background: 'rgba(102, 126, 234, 0.1)', color: '#667eea' }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              Transparent, <span className="text-gradient">Scalable Pricing</span>
+            </Typography>
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{ maxWidth: 600, mx: 'auto', fontWeight: 400 }}
+            >
+              Start free, scale as you grow. All plans include core AI features.
             </Typography>
           </Box>
 
@@ -545,18 +1351,33 @@ function LandingPage() {
             {pricingTiers.map((tier) => (
               <Grid item xs={12} md={4} key={tier.name}>
                 <Card
+                  className="card-hover"
                   sx={{
-                    ...styles.pricingCard,
-                    border: tier.popular ? '2px solid #667eea' : '1px solid #e0e0e0',
-                    position: 'relative'
+                    height: '100%',
+                    borderRadius: 3,
+                    border: tier.popular ? '2px solid #667eea' : '1px solid',
+                    borderColor: tier.popular ? '#667eea' : 'grey.200',
+                    position: 'relative',
+                    overflow: 'visible'
                   }}
-                  elevation={tier.popular ? 8 : 1}
+                  elevation={tier.popular ? 8 : 0}
                 >
                   {tier.popular && (
-                    <Typography sx={styles.popularBadge}>Most Popular</Typography>
+                    <Chip
+                      label="Most Popular"
+                      sx={{
+                        position: 'absolute',
+                        top: -12,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        fontWeight: 600
+                      }}
+                    />
                   )}
-                  <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h5" fontWeight={600} gutterBottom>
+                  <CardContent sx={{ p: 4, pt: tier.popular ? 5 : 4 }}>
+                    <Typography variant="h5" fontWeight={700} gutterBottom>
                       {tier.name}
                     </Typography>
                     <Typography color="text.secondary" sx={{ mb: 3 }}>
@@ -565,13 +1386,13 @@ function LandingPage() {
                     <Box sx={{ mb: 3 }}>
                       {typeof tier.price === 'number' ? (
                         <>
-                          <Typography component="span" variant="h3" fontWeight={700}>
+                          <Typography component="span" variant="h3" fontWeight={800}>
                             ${tier.price}
                           </Typography>
                           <Typography component="span" color="text.secondary">/month</Typography>
                         </>
                       ) : (
-                        <Typography variant="h4" fontWeight={700}>
+                        <Typography variant="h4" fontWeight={800}>
                           {tier.price}
                         </Typography>
                       )}
@@ -580,8 +1401,8 @@ function LandingPage() {
                     <Box sx={{ mb: 3 }}>
                       {tier.features.map((feature) => (
                         <Box key={feature} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                          <CheckIcon sx={{ color: '#667eea', mr: 1.5, fontSize: 20 }} />
-                          <Typography>{feature}</Typography>
+                          <CheckIcon sx={{ color: '#10b981', mr: 1.5, fontSize: 20 }} />
+                          <Typography variant="body2">{feature}</Typography>
                         </Box>
                       ))}
                     </Box>
@@ -592,8 +1413,10 @@ function LandingPage() {
                       sx={{
                         borderRadius: 2,
                         py: 1.5,
+                        fontWeight: 600,
                         ...(tier.popular && {
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
                         })
                       }}
                     >
@@ -608,28 +1431,57 @@ function LandingPage() {
       </Box>
 
       {/* Testimonials */}
-      <Box id="testimonials" sx={{ py: 10 }}>
+      <Box id="testimonials" sx={{ py: 12, background: 'white' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography variant="h2" fontWeight={700} gutterBottom>
-              Trusted by Healthcare Leaders
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              See what our customers say about EOB Extract
+            <Chip
+              label="Customer Stories"
+              sx={{ mb: 2, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              Trusted by <span className="text-gradient">Industry Leaders</span>
             </Typography>
           </Box>
 
           <Grid container spacing={4}>
             {testimonials.map((testimonial) => (
               <Grid item xs={12} md={4} key={testimonial.name}>
-                <Card sx={styles.testimonialCard} elevation={0}>
+                <Card
+                  className="card-hover"
+                  sx={{
+                    height: '100%',
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}
+                  elevation={0}
+                >
                   <CardContent sx={{ p: 4 }}>
+                    <Chip
+                      label={testimonial.industry}
+                      size="small"
+                      sx={{ mb: 2, background: 'rgba(102, 126, 234, 0.1)', color: '#667eea' }}
+                    />
                     <Rating value={testimonial.rating} readOnly sx={{ mb: 2 }} />
-                    <Typography sx={{ mb: 3, fontStyle: 'italic' }}>
+                    <Typography sx={{ mb: 3, fontStyle: 'italic', color: 'text.secondary' }}>
                       "{testimonial.quote}"
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar sx={{ bgcolor: '#667eea', mr: 2 }}>{testimonial.avatar}</Avatar>
+                      <Avatar
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          mr: 2
+                        }}
+                      >
+                        {testimonial.avatar}
+                      </Avatar>
                       <Box>
                         <Typography fontWeight={600}>{testimonial.name}</Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -646,11 +1498,17 @@ function LandingPage() {
       </Box>
 
       {/* FAQ Section */}
-      <Box id="faq" sx={{ py: 10, background: '#f8f9fa' }}>
+      <Box id="faq" sx={{ py: 12, background: '#f8fafc' }}>
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography variant="h2" fontWeight={700} gutterBottom>
-              Frequently Asked Questions
+            <Typography
+              variant="h2"
+              sx={{
+                fontWeight: 800,
+                fontSize: { xs: '2rem', md: '2.75rem' }
+              }}
+            >
+              Frequently Asked <span className="text-gradient">Questions</span>
             </Typography>
           </Box>
 
@@ -661,16 +1519,21 @@ function LandingPage() {
               sx={{
                 mb: 2,
                 '&:before': { display: 'none' },
-                borderRadius: '8px !important',
-                border: '1px solid #e0e0e0'
+                borderRadius: '12px !important',
+                border: '1px solid',
+                borderColor: 'grey.200',
+                overflow: 'hidden'
               }}
             >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                sx={{ px: 3, py: 1 }}
+              >
                 <Typography variant="subtitle1" fontWeight={600}>
                   {faq.question}
                 </Typography>
               </AccordionSummary>
-              <AccordionDetails>
+              <AccordionDetails sx={{ px: 3, pb: 3 }}>
                 <Typography color="text.secondary">
                   {faq.answer}
                 </Typography>
@@ -681,14 +1544,29 @@ function LandingPage() {
       </Box>
 
       {/* CTA Section */}
-      <Box id="cta" sx={styles.ctaSection}>
-        <Container maxWidth="md">
+      <Box
+        id="cta"
+        sx={{
+          py: 12,
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <FloatingParticles />
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
           <Box sx={{ textAlign: 'center', color: 'white' }}>
-            <Typography variant="h3" fontWeight={700} gutterBottom>
-              Ready to Transform Your EOB Processing?
+            <Typography
+              variant="h3"
+              fontWeight={800}
+              gutterBottom
+              sx={{ fontSize: { xs: '1.75rem', md: '2.5rem' } }}
+            >
+              Ready to Transform Your Document Processing?
             </Typography>
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-              Start your 14-day free trial today. No credit card required.
+            <Typography variant="h6" sx={{ mb: 4, opacity: 0.8, fontWeight: 400 }}>
+              Join 2,000+ companies processing millions of documents with DocuAI.
+              Start your 14-day free trial today.
             </Typography>
 
             <Box
@@ -698,7 +1576,8 @@ function LandingPage() {
                 display: 'flex',
                 gap: 2,
                 justifyContent: 'center',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                mb: 4
               }}
             >
               <TextField
@@ -708,7 +1587,7 @@ function LandingPage() {
                 type="email"
                 required
                 sx={{
-                  minWidth: 300,
+                  minWidth: { xs: '100%', sm: 320 },
                   '& .MuiOutlinedInput-root': {
                     background: 'white',
                     borderRadius: 2,
@@ -719,22 +1598,25 @@ function LandingPage() {
                 type="submit"
                 variant="contained"
                 size="large"
+                endIcon={<ArrowIcon />}
                 sx={{
-                  background: '#1a237e',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   px: 4,
                   borderRadius: 2,
-                  '&:hover': { background: '#0d1642' }
+                  fontWeight: 600,
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  minWidth: { xs: '100%', sm: 'auto' }
                 }}
               >
-                Get Started Free
+                Start Free Trial
               </Button>
             </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mt: 4, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}>
               {['14-day free trial', 'No credit card required', 'Full feature access'].map((text) => (
                 <Box key={text} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CheckIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  <Typography variant="body2">{text}</Typography>
+                  <CheckIcon sx={{ fontSize: 18, mr: 0.5, color: '#10b981' }} />
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>{text}</Typography>
                 </Box>
               ))}
             </Box>
@@ -743,66 +1625,98 @@ function LandingPage() {
       </Box>
 
       {/* Footer */}
-      <Box sx={styles.footer}>
+      <Box sx={{ background: '#0f172a', color: 'white', py: 8 }}>
         <Container maxWidth="lg">
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
-              <Typography variant="h5" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <AutoAwesomeIcon sx={{ mr: 1 }} />
-                EOB Extract
-              </Typography>
-              <Typography sx={{ opacity: 0.8, mb: 2 }}>
-                AI-powered document processing for modern healthcare organizations.
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: 1.5
+                  }}
+                >
+                  <AutoAwesomeIcon sx={{ color: 'white', fontSize: 24 }} />
+                </Box>
+                <Typography variant="h5" fontWeight={700}>
+                  DocuAI
+                </Typography>
+              </Box>
+              <Typography sx={{ opacity: 0.7, mb: 2, maxWidth: 300 }}>
+                Universal AI-powered document processing platform for modern enterprises.
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton sx={{ color: 'white' }}><LinkedInIcon /></IconButton>
-                <IconButton sx={{ color: 'white' }}><TwitterIcon /></IconButton>
+                <IconButton sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 } }}>
+                  <LinkedInIcon />
+                </IconButton>
+                <IconButton sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 } }}>
+                  <TwitterIcon />
+                </IconButton>
               </Box>
             </Grid>
 
             <Grid item xs={6} md={2}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Product</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Features</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Pricing</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>API Docs</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Integrations</Typography>
+              {['Features', 'Pricing', 'Industries', 'API Docs', 'Integrations'].map((item) => (
+                <Typography
+                  key={item}
+                  sx={{ opacity: 0.7, mb: 1, cursor: 'pointer', '&:hover': { opacity: 1 } }}
+                >
+                  {item}
+                </Typography>
+              ))}
             </Grid>
 
             <Grid item xs={6} md={2}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Company</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>About</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Blog</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Careers</Typography>
-              <Typography sx={{ opacity: 0.8, mb: 1, cursor: 'pointer' }}>Contact</Typography>
+              {['About', 'Blog', 'Careers', 'Contact', 'Partners'].map((item) => (
+                <Typography
+                  key={item}
+                  sx={{ opacity: 0.7, mb: 1, cursor: 'pointer', '&:hover': { opacity: 1 } }}
+                >
+                  {item}
+                </Typography>
+              ))}
             </Grid>
 
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Contact Us</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, opacity: 0.8 }}>
-                <EmailIcon sx={{ mr: 1, fontSize: 18 }} />
-                <Typography>support@eobextract.com</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, opacity: 0.7 }}>
+                <EmailIcon sx={{ mr: 1.5, fontSize: 18 }} />
+                <Typography>support@docuai.com</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, opacity: 0.8 }}>
-                <PhoneIcon sx={{ mr: 1, fontSize: 18 }} />
-                <Typography>1-800-EOB-DATA</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, opacity: 0.7 }}>
+                <PhoneIcon sx={{ mr: 1.5, fontSize: 18 }} />
+                <Typography>1-800-DOCU-AI</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', opacity: 0.8 }}>
-                <LocationIcon sx={{ mr: 1, fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', opacity: 0.7 }}>
+                <LocationIcon sx={{ mr: 1.5, fontSize: 18 }} />
                 <Typography>San Francisco, CA</Typography>
               </Box>
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.2)' }} />
+          <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.1)' }} />
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography sx={{ opacity: 0.6 }}>
-              2026 EOB Extract. All rights reserved.
+            <Typography sx={{ opacity: 0.5 }}>
+              2026 DocuAI. All rights reserved.
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
-              <Typography sx={{ opacity: 0.6, cursor: 'pointer' }}>Privacy Policy</Typography>
-              <Typography sx={{ opacity: 0.6, cursor: 'pointer' }}>Terms of Service</Typography>
-              <Typography sx={{ opacity: 0.6, cursor: 'pointer' }}>HIPAA Compliance</Typography>
+              {['Privacy Policy', 'Terms of Service', 'Security', 'Compliance'].map((item) => (
+                <Typography
+                  key={item}
+                  sx={{ opacity: 0.5, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                >
+                  {item}
+                </Typography>
+              ))}
             </Box>
           </Box>
         </Container>

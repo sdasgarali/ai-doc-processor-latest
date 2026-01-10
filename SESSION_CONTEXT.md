@@ -8,6 +8,8 @@ All session tasks completed:
 3. Run comprehensive UAT testing - COMPLETED (95.2% pass rate)
 4. Fix any issues found during testing - COMPLETED (rate limiting working correctly)
 5. Prepare detailed test report - COMPLETED (UAT_TEST_REPORT_V2.md)
+6. Client access control & multi-format output - COMPLETED (2026-01-10)
+7. Landing page redesign to universal DocuAI platform - COMPLETED (2026-01-10)
 
 ---
 
@@ -270,13 +272,130 @@ The one "failed" test (XSS login attempt) received 429 status because the rate l
 
 ## Next Steps (For Production)
 
-1. Run database migration: `mysql -u root -p eob_extraction < database/output_profiles.sql`
+1. ~~Run database migration~~ - **COMPLETED** (2026-01-09)
+   - Tables created: `output_profile`, `output_profile_field`, `category_sample_document`, `category_creation_request`
+   - Default profiles created for EOB and Facesheet categories
+   - 24 profile fields configured
 2. Configure AI provider API keys in `.env`:
    - `GROQ_API_KEY` or `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
-3. Create default output profiles for existing categories
-4. Test AI-powered category creation with sample documents
+3. Test AI-powered category creation with sample documents
+
+---
+
+---
+
+## Session Updates (2026-01-10)
+
+### 6. Client Access Control & Multi-Format Output
+
+#### Inactive Client Blocking
+- Added client status check in `middleware/auth.js` to block inactive clients
+- Added axios interceptor in `AuthContext.js` to catch `clientInactive` responses
+- Added full-page "Account Inactive" screen in `App.js` with logout option
+- Inactive clients filtered from all dropdown selections
+
+#### Multi-Format Output Selection
+- Changed output profile to support multiple formats (CSV, JSON, XLSX, XML, PDF, DOCX, TXT)
+- Added multi-select with checkboxes in Output Profile Management UI
+- Database column changed from ENUM to VARCHAR(100) for comma-separated formats
+
+#### Extraction Prompt per Output Profile
+- Moved extraction prompt from Processing Engine Config to Output Profile
+- Each client + category combination can have custom extraction prompt
+- Python processor updated to use profile-specific extraction prompt:
+  - `server.py`: Added `extractionPrompt` to request model
+  - `orchestrator.py`: Added `extraction_prompt` to `ProcessRequest`
+  - `openai_extractor.py`: Modified to accept and use custom prompt
+
+#### UI Fixes
+- Fixed "0" display bug in Output Profile table (JSX conditional rendering)
+- Removed Model column from Documents page
+
+### 7. Landing Page Redesign - Universal DocuAI Platform
+
+Completely redesigned landing page from EOB-focused to universal document processing platform.
+
+#### Rebranding
+- Renamed from "EOB Extract" to "DocuAI"
+- Universal AI-powered document processing platform
+
+#### New Sections
+1. **Hero Section**
+   - Animated gradient background with floating particles
+   - Industry showcase with auto-rotating tabs
+   - Key stats display (100+ document types, 99.2% accuracy, <3s processing)
+
+2. **Industries Section** (6 industries)
+   - Healthcare: EOB, Facesheet, Medical Claims, Patient Forms
+   - Finance: Invoices, Receipts, Bank Statements, Tax Documents
+   - Legal: Contracts, Legal Filings, Court Documents, NDAs
+   - Human Resources: Resumes, Applications, Onboarding Forms, Timesheets
+   - Supply Chain: Shipping Labels, Packing Slips, BOL, Customs Forms
+   - Insurance: Claims, Policies, Certificates, Loss Reports
+
+3. **How It Works** (4-step workflow)
+   - Upload Any Document
+   - AI Extracts Data
+   - Validate & Transform
+   - Export & Integrate
+
+4. **Features Section**
+   - Multi-Model AI Engine (Google Document AI + GPT-4)
+   - Lightning Processing (<3 sec/page)
+   - Enterprise Security (HIPAA, SOC 2)
+   - Universal Integration (50+ integrations)
+   - Smart Analytics
+   - Custom Output Profiles
+
+5. **Animated Statistics**
+   - 50M+ Documents Processed
+   - 99.2% Extraction Accuracy
+   - 2000+ Enterprise Clients
+   - 85% Time Saved
+
+#### Modern Animations (Inspired by MagicUI)
+- CSS keyframe animations: float, pulse, gradientShift, slideUp, scaleIn, bounce
+- Morphing blob backgrounds
+- Shimmer effects
+- Card hover transitions with scale and shadow
+- Animated counters with intersection observer
+- Floating particles effect
+- Gradient text with `-webkit-background-clip`
+
+#### Updated Pricing
+- Starter: $99/month (500 pages, 5 users, 3 doc types)
+- Professional: $399/month (5,000 pages, 25 users, all doc types)
+- Enterprise: Custom (unlimited, on-premise option, custom AI models)
+
+#### Mobile Responsive
+- Mobile drawer menu
+- Responsive grid layouts
+- Touch-friendly navigation
+
+### Files Modified (2026-01-10)
+
+**Client Access Control:**
+- `middleware/auth.js` - Client status check
+- `client/src/contexts/AuthContext.js` - Inactive client interceptor
+- `client/src/App.js` - Account inactive screen
+- `client/src/pages/Admin/OutputProfileManagement.js` - Multi-format, extraction prompt
+- `client/src/pages/Admin/UserManagement.js` - Active clients filter
+- `client/src/pages/Reports/ClientUsageReport.js` - Active clients filter
+- `client/src/pages/Admin/ProcessingEngineConfig.js` - Removed extraction section
+- `routes/outputProfiles.js` - Multi-format handling
+
+**Python Processor:**
+- `python_processor/server.py` - extractionPrompt field
+- `python_processor/orchestrator.py` - extraction_prompt handling
+- `python_processor/openai_extractor.py` - Custom prompt support
+
+**Landing Page:**
+- `client/src/pages/LandingPage.js` - Complete redesign
+
+**Documents Page:**
+- `client/src/pages/Documents.js` - Removed Model column
 
 ---
 
 ## Last Updated
-2026-01-09 - All tasks completed
+2026-01-10 - Landing page redesign and client access control features completed
