@@ -10,49 +10,61 @@ router.get('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res) 
   try {
     const { client_id, category_id, is_default, is_active = true, page = 1, limit = 20 } = req.query;
 
-    let sql = `
-      SELECT op.*, op.output_format as output_formats,
-             dc.category_name, dc.category_description,
-             c.client_name,
-             up.first_name as created_by_name, up.last_name as created_by_lastname
-      FROM output_profile op
-      LEFT JOIN doc_category dc ON op.doc_category_id = dc.category_id
-      LEFT JOIN client c ON op.client_id = c.client_id
-      LEFT JOIN user_profile up ON op.created_by = up.userid
-      WHERE 1=1
-    `;
-    const params = [];
+    // Get all profiles first
+    let profiles = await query('SELECT * FROM output_profile');
 
+    // Apply filters
     if (client_id) {
-      sql += ' AND op.client_id = ?';
-      params.push(client_id);
+      profiles = profiles.filter(p => p.client_id == client_id);
     }
     if (category_id) {
-      sql += ' AND op.doc_category_id = ?';
-      params.push(category_id);
+      profiles = profiles.filter(p => p.doc_category_id == category_id);
     }
     if (is_default !== undefined) {
-      sql += ' AND op.is_default = ?';
-      params.push(is_default === 'true' || is_default === true ? 1 : 0);
+      const isDefaultBool = is_default === 'true' || is_default === true;
+      profiles = profiles.filter(p => p.is_default === isDefaultBool);
     }
     if (is_active !== undefined) {
-      sql += ' AND op.is_active = ?';
-      params.push(is_active === 'true' || is_active === true ? 1 : 0);
+      const isActiveBool = is_active === 'true' || is_active === true;
+      profiles = profiles.filter(p => p.is_active === isActiveBool);
     }
 
-    // Get total count
-    const countSql = sql.replace(/SELECT op\.\*,[\s\S]*?FROM/, 'SELECT COUNT(*) as total FROM');
-    const countResult = await query(countSql, params);
-    const total = countResult[0]?.total || 0;
+    // Get related data for enrichment
+    const categories = await query('SELECT * FROM doc_category');
+    const clients = await query('SELECT * FROM client');
+    const users = await query('SELECT userid, first_name, last_name FROM user_profile');
 
-    // Add pagination
+    // Create lookup maps
+    const categoryMap = {};
+    categories.forEach(c => categoryMap[c.category_id] = c);
+    const clientMap = {};
+    clients.forEach(c => clientMap[c.client_id] = c);
+    const userMap = {};
+    users.forEach(u => userMap[u.userid] = u);
+
+    // Enrich profiles with related data
+    profiles = profiles.map(p => ({
+      ...p,
+      output_formats: p.output_format,
+      category_name: categoryMap[p.doc_category_id]?.category_name || null,
+      category_description: categoryMap[p.doc_category_id]?.category_description || null,
+      client_name: clientMap[p.client_id]?.client_name || null,
+      created_by_name: userMap[p.created_by]?.first_name || null,
+      created_by_lastname: userMap[p.created_by]?.last_name || null
+    }));
+
+    // Sort: default profiles first, then by created_at desc
+    profiles.sort((a, b) => {
+      if (a.is_default !== b.is_default) return b.is_default ? 1 : -1;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    // Pagination
+    const total = profiles.length;
     const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
     const pageNum = Math.max(parseInt(page) || 1, 1);
     const offsetNum = (pageNum - 1) * limitNum;
-
-    sql += ` ORDER BY op.is_default DESC, op.created_at DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
-
-    const profiles = await query(sql, params);
+    profiles = profiles.slice(offsetNum, offsetNum + limitNum);
 
     res.json({
       success: true,
