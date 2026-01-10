@@ -229,27 +229,26 @@ router.delete('/users/:userid', verifyToken, checkRole('superadmin'), async (req
 router.get('/clients', verifyToken, checkRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
-    let sql = 'SELECT * FROM client WHERE 1=1';
-    const params = [];
 
+    // Fetch all clients
+    let clients = await query('SELECT * FROM client');
+
+    // Apply status filter
     if (status) {
-      sql += ' AND status = ?';
-      params.push(status);
+      clients = clients.filter(c => c.status === status);
     }
 
-    const countSql = sql.replace(/SELECT.*FROM/, 'SELECT COUNT(*) as total FROM');
-    const countResult = await query(countSql, params);
-    const total = countResult[0].total;
+    // Get total count before pagination
+    const total = clients.length;
 
-    const limitNum = parseInt(limit);
-    const pageNum = parseInt(page);
+    // Sort by created_at DESC
+    clients.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Apply pagination
+    const limitNum = parseInt(limit) || 20;
+    const pageNum = parseInt(page) || 1;
     const offsetNum = (pageNum - 1) * limitNum;
-    
-    // Use string interpolation for LIMIT/OFFSET (MySQL requirement)
-    sql += ` ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
-    
-    const clients = await query(sql, params);
+    clients = clients.slice(offsetNum, offsetNum + limitNum);
 
     res.json({
       success: true,
@@ -263,10 +262,10 @@ router.get('/clients', verifyToken, checkRole('admin', 'superadmin'), async (req
     });
   } catch (error) {
     console.error('Get clients error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error fetching clients.',
-      error: error.message 
+      error: error.message
     });
   }
 });
