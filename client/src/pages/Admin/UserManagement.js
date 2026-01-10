@@ -86,7 +86,8 @@ const UserManagement = () => {
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/clients', {
+      // Only fetch active clients for dropdown
+      const response = await axios.get('http://localhost:5000/api/admin/clients?status=active', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClients(response.data.data || []);

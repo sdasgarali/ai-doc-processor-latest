@@ -46,6 +46,7 @@ class ProcessDocumentRequest(BaseModel):
     sessionId: Optional[str] = Field(None, description="Session ID")
     modelId: Optional[int] = Field(2, description="OpenAI model ID")
     docCategory: int = Field(1, description="Document category (1=EOB, 2=Facesheet, 3=Invoice)")
+    extractionPrompt: Optional[str] = Field(None, description="Custom extraction prompt from output profile")
 
     class Config:
         json_schema_extra = {
@@ -194,7 +195,8 @@ async def process_eob_document(
         "clientId": request.clientId,
         "sessionId": request.sessionId,
         "modelId": request.modelId,
-        "docCategory": request.docCategory
+        "docCategory": request.docCategory,
+        "extractionPrompt": request.extractionPrompt
     }
 
     # Start background processing
@@ -234,7 +236,8 @@ async def process_eob_document_sync(request: ProcessDocumentRequest):
         "clientId": request.clientId,
         "sessionId": request.sessionId,
         "modelId": request.modelId,
-        "docCategory": request.docCategory
+        "docCategory": request.docCategory,
+        "extractionPrompt": request.extractionPrompt
     }
 
     try:

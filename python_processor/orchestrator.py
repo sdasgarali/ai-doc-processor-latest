@@ -101,6 +101,7 @@ class ProcessRequest:
     session_id: Optional[str] = None
     model_id: int = 2
     doc_category: int = 1  # 1=EOB, 2=Facesheet, 3=Invoice
+    extraction_prompt: Optional[str] = None  # Custom extraction prompt from output profile
 
     @classmethod
     def from_dict(cls, data: dict) -> 'ProcessRequest':
@@ -115,7 +116,8 @@ class ProcessRequest:
             client_id=data.get('clientId'),
             session_id=data.get('sessionId'),
             model_id=int(data.get('modelId', 2)),
-            doc_category=int(data.get('docCategory', 1))
+            doc_category=int(data.get('docCategory', 1)),
+            extraction_prompt=data.get('extractionPrompt')
         )
 
 
@@ -225,7 +227,8 @@ class DocumentOrchestrator:
             extraction_result = self._extract_data(
                 docai_result['raw_data'],
                 request.doc_category,
-                request.filename
+                request.filename,
+                request.extraction_prompt
             )
 
             # Step 5: Calculate costs
@@ -381,7 +384,7 @@ class DocumentOrchestrator:
 
         return None
 
-    def _extract_data(self, raw_data: Dict, doc_category: int, filename: str):
+    def _extract_data(self, raw_data: Dict, doc_category: int, filename: str, extraction_prompt: Optional[str] = None):
         """Extract data based on document category"""
         # Check if this is a PMG/DN facesheet (bypass LLM)
         if doc_category == 2 and (filename.startswith('PMG_') or filename.startswith('DN_')):
@@ -400,7 +403,9 @@ class DocumentOrchestrator:
         category = category_map.get(doc_category, DocumentCategory.EOB)
 
         logger.info(f"Extracting data using OpenAI for {category.name}")
-        return self.openai_extractor.extract_data(raw_data, category, filename)
+        if extraction_prompt:
+            logger.info("Using custom extraction prompt from output profile")
+        return self.openai_extractor.extract_data(raw_data, category, filename, extraction_prompt)
 
     def _sort_records_by_page(self, records: list) -> list:
         """Sort records by Page_no in ascending order"""

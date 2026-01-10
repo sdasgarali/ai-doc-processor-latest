@@ -29,6 +29,30 @@ const verifyToken = async (req, res, next) => {
     }
 
     req.user = users[0];
+
+    // Check if user's client is active (skip for superadmin who manage all clients)
+    if (req.user.client_id && req.user.user_role !== 'superadmin') {
+      const clients = await query(
+        'SELECT client_id, status FROM client WHERE client_id = ?',
+        [req.user.client_id]
+      );
+
+      if (clients.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Client not found. Contact administrator.'
+        });
+      }
+
+      if (clients[0].status === 'inactive') {
+        return res.status(403).json({
+          success: false,
+          message: 'Your client account is inactive. All features are disabled. Please contact administrator.',
+          clientInactive: true
+        });
+      }
+    }
+
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

@@ -36,7 +36,10 @@ import {
   ListItemSecondaryAction,
   Divider,
   Tab,
-  Tabs
+  Tabs,
+  Checkbox,
+  ListItemIcon,
+  OutlinedInput
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -64,11 +67,31 @@ const OutputProfileManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openFieldsDialog, setOpenFieldsDialog] = useState(false);
   const [openCopyDialog, setOpenCopyDialog] = useState(false);
+  const [openEditFieldDialog, setOpenEditFieldDialog] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [editingField, setEditingField] = useState(null);
   const [profileFields, setProfileFields] = useState([]);
   const [availableFields, setAvailableFields] = useState([]);
   const [dialogTab, setDialogTab] = useState(0);
+
+  const [fieldFormData, setFieldFormData] = useState({
+    custom_label: '',
+    is_required: false,
+    is_included: true,
+    default_value: '',
+    transform_type: 'none',
+    transform_config: {}
+  });
+
+  const [openNewFieldDialog, setOpenNewFieldDialog] = useState(false);
+  const [newFieldData, setNewFieldData] = useState({
+    field_name: '',
+    field_display_name: '',
+    field_type: 'string',
+    is_required: false,
+    description: ''
+  });
 
   const [filters, setFilters] = useState({
     category_id: '',
@@ -81,7 +104,7 @@ const OutputProfileManagement = () => {
     client_id: '',
     doc_category_id: '',
     is_default: false,
-    output_format: 'csv',
+    output_formats: ['csv'],
     csv_delimiter: ',',
     csv_quote_char: '"',
     include_header: true,
@@ -89,7 +112,8 @@ const OutputProfileManagement = () => {
     number_format: '0.00',
     currency_symbol: '$',
     null_value: '',
-    description: ''
+    description: '',
+    extraction_prompt: ''
   });
 
   const [copyData, setCopyData] = useState({
@@ -135,12 +159,18 @@ const OutputProfileManagement = () => {
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/admin/clients`, {
+      console.log('Fetching clients with token:', token ? 'present' : 'missing');
+      // Only fetch active clients for dropdown
+      const response = await axios.get(`${API_BASE}/admin/clients?status=active`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setClients(response.data.data || []);
+      console.log('Clients response:', response.data);
+      const clientsData = response.data.data || response.data || [];
+      console.log('Setting clients:', clientsData.length, 'items');
+      setClients(clientsData);
     } catch (err) {
       console.error('Error fetching clients:', err);
+      console.error('Error response:', err.response?.data);
     }
   };
 
@@ -173,12 +203,21 @@ const OutputProfileManagement = () => {
   const handleOpenDialog = (profile = null) => {
     if (profile) {
       setEditingProfile(profile);
+      // Parse output_formats - support both old single format and new multiple formats
+      let formats = ['csv'];
+      if (profile.output_formats) {
+        formats = Array.isArray(profile.output_formats)
+          ? profile.output_formats
+          : profile.output_formats.split(',').map(f => f.trim());
+      } else if (profile.output_format) {
+        formats = [profile.output_format];
+      }
       setFormData({
         profile_name: profile.profile_name,
         client_id: profile.client_id || '',
         doc_category_id: profile.doc_category_id,
         is_default: profile.is_default,
-        output_format: profile.output_format || 'csv',
+        output_formats: formats,
         csv_delimiter: profile.csv_delimiter || ',',
         csv_quote_char: profile.csv_quote_char || '"',
         include_header: profile.include_header !== false,
@@ -186,7 +225,8 @@ const OutputProfileManagement = () => {
         number_format: profile.number_format || '0.00',
         currency_symbol: profile.currency_symbol || '$',
         null_value: profile.null_value || '',
-        description: profile.description || ''
+        description: profile.description || '',
+        extraction_prompt: profile.extraction_prompt || ''
       });
     } else {
       setEditingProfile(null);
@@ -195,7 +235,7 @@ const OutputProfileManagement = () => {
         client_id: '',
         doc_category_id: '',
         is_default: false,
-        output_format: 'csv',
+        output_formats: ['csv'],
         csv_delimiter: ',',
         csv_quote_char: '"',
         include_header: true,
@@ -203,7 +243,8 @@ const OutputProfileManagement = () => {
         number_format: '0.00',
         currency_symbol: '$',
         null_value: '',
-        description: ''
+        description: '',
+        extraction_prompt: ''
       });
     }
     setDialogTab(0);
@@ -353,6 +394,112 @@ const OutputProfileManagement = () => {
       console.error('Error removing field:', err);
       setError(err.response?.data?.message || 'Failed to remove field');
       setTimeout(() => setError(''), 2000);
+    }
+  };
+
+  const handleOpenEditField = (field) => {
+    setEditingField(field);
+    setFieldFormData({
+      custom_label: field.custom_label || '',
+      is_required: field.is_required || false,
+      is_included: field.is_included !== false,
+      default_value: field.default_value || '',
+      transform_type: field.transform_type || 'none',
+      transform_config: field.transform_config ?
+        (typeof field.transform_config === 'string' ? JSON.parse(field.transform_config) : field.transform_config)
+        : {}
+    });
+    setOpenEditFieldDialog(true);
+  };
+
+  const handleCloseEditField = () => {
+    setOpenEditFieldDialog(false);
+    setEditingField(null);
+    setFieldFormData({
+      custom_label: '',
+      is_required: false,
+      is_included: true,
+      default_value: '',
+      transform_type: 'none',
+      transform_config: {}
+    });
+  };
+
+  const handleUpdateField = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_BASE}/output-profiles/${selectedProfile.profile_id}/fields/${editingField.field_id}`,
+        fieldFormData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchProfileFields(selectedProfile.profile_id);
+      handleCloseEditField();
+      setSuccess('Field updated successfully!');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      console.error('Error updating field:', err);
+      setError(err.response?.data?.message || 'Failed to update field');
+      setTimeout(() => setError(''), 2000);
+    }
+  };
+
+  const handleOpenNewFieldDialog = () => {
+    setNewFieldData({
+      field_name: '',
+      field_display_name: '',
+      field_type: 'string',
+      is_required: false,
+      description: ''
+    });
+    setOpenNewFieldDialog(true);
+  };
+
+  const handleCloseNewFieldDialog = () => {
+    setOpenNewFieldDialog(false);
+    setNewFieldData({
+      field_name: '',
+      field_display_name: '',
+      field_type: 'string',
+      is_required: false,
+      description: ''
+    });
+  };
+
+  const handleCreateNewField = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      // Create the field in field_table
+      const fieldResponse = await axios.post(
+        `${API_BASE}/admin/fields`,
+        {
+          ...newFieldData,
+          doc_category: selectedProfile.doc_category_id
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const newFieldId = fieldResponse.data.field_id || fieldResponse.data.data?.field_id;
+
+      // Add field to the profile
+      if (newFieldId) {
+        await axios.post(
+          `${API_BASE}/output-profiles/${selectedProfile.profile_id}/fields`,
+          { field_id: newFieldId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      // Refresh fields
+      await fetchProfileFields(selectedProfile.profile_id);
+      handleCloseNewFieldDialog();
+      setSuccess('New field created and added to profile!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Error creating field:', err);
+      setError(err.response?.data?.message || 'Failed to create field');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -519,7 +666,16 @@ const OutputProfileManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Chip label={profile.output_format?.toUpperCase()} size="small" variant="outlined" />
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {(profile.output_formats
+                          ? (Array.isArray(profile.output_formats)
+                              ? profile.output_formats
+                              : profile.output_formats.split(',').map(f => f.trim()))
+                          : [profile.output_format || 'csv']
+                        ).map((format) => (
+                          <Chip key={format} label={format?.toUpperCase()} size="small" variant="outlined" />
+                        ))}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -540,14 +696,13 @@ const OutputProfileManagement = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        {profile.is_default && (
+                        {profile.is_default ? (
                           <Tooltip title="Copy to Client">
                             <IconButton size="small" color="secondary" onClick={() => handleOpenCopyDialog(profile)}>
                               <CopyIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        )}
-                        {!profile.is_default && (
+                        ) : (
                           <Tooltip title="Delete Profile">
                             <IconButton size="small" color="error" onClick={() => handleDeleteProfile(profile.profile_id)}>
                               <DeleteIcon fontSize="small" />
@@ -571,6 +726,7 @@ const OutputProfileManagement = () => {
           <Tabs value={dialogTab} onChange={(e, v) => setDialogTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tab label="Basic Info" />
             <Tab label="Format Settings" />
+            <Tab label="Extraction Settings" />
           </Tabs>
 
           {dialogTab === 0 && (
@@ -634,18 +790,37 @@ const OutputProfileManagement = () => {
 
           {dialogTab === 1 && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel>Output Format</InputLabel>
+                  <InputLabel>Output Formats</InputLabel>
                   <Select
-                    value={formData.output_format}
-                    label="Output Format"
-                    onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
+                    multiple
+                    value={formData.output_formats}
+                    label="Output Formats"
+                    onChange={(e) => setFormData({ ...formData, output_formats: e.target.value })}
+                    input={<OutlinedInput label="Output Formats" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value.toUpperCase()} size="small" />
+                        ))}
+                      </Box>
+                    )}
                   >
-                    <MenuItem value="csv">CSV</MenuItem>
-                    <MenuItem value="json">JSON</MenuItem>
-                    <MenuItem value="excel">Excel</MenuItem>
-                    <MenuItem value="xml">XML</MenuItem>
+                    {[
+                      { value: 'csv', label: 'CSV (.csv)' },
+                      { value: 'json', label: 'JSON (.json)' },
+                      { value: 'xlsx', label: 'Excel (.xlsx)' },
+                      { value: 'xml', label: 'XML (.xml)' },
+                      { value: 'pdf', label: 'PDF (.pdf)' },
+                      { value: 'docx', label: 'Word (.docx)' },
+                      { value: 'txt', label: 'Text (.txt)' }
+                    ].map((format) => (
+                      <MenuItem key={format.value} value={format.value}>
+                        <Checkbox checked={formData.output_formats.indexOf(format.value) > -1} />
+                        <ListItemText primary={format.label} />
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -660,7 +835,7 @@ const OutputProfileManagement = () => {
                   label="Include Header Row"
                 />
               </Grid>
-              {formData.output_format === 'csv' && (
+              {formData.output_formats.includes('csv') && (
                 <>
                   <Grid item xs={12} sm={6}>
                     <TextField
@@ -714,6 +889,38 @@ const OutputProfileManagement = () => {
                   value={formData.null_value}
                   onChange={(e) => setFormData({ ...formData, null_value: e.target.value })}
                   helperText="What to show for empty values"
+                />
+              </Grid>
+            </Grid>
+          )}
+
+          {dialogTab === 2 && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Custom extraction prompt overrides the default prompt for this profile's document category.
+                  Leave empty to use the system default.
+                </Alert>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Custom Extraction Prompt"
+                  fullWidth
+                  multiline
+                  rows={12}
+                  value={formData.extraction_prompt}
+                  onChange={(e) => setFormData({ ...formData, extraction_prompt: e.target.value })}
+                  placeholder="Enter custom extraction prompt for AI processing...
+
+Example: Extract the following fields from the EOB document:
+- Patient Name
+- Date of Service
+- Claim Number
+- Billed Amount
+- Allowed Amount
+- Paid Amount
+..."
+                  helperText="Custom prompt for data extraction (leave empty for default)"
                 />
               </Grid>
             </Grid>
@@ -785,14 +992,26 @@ const OutputProfileManagement = () => {
                             }
                           />
                           <ListItemSecondaryAction>
-                            <IconButton
-                              edge="end"
-                              size="small"
-                              color="error"
-                              onClick={() => handleRemoveField(field.field_id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                            <Tooltip title="Edit Field">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleOpenEditField(field)}
+                                sx={{ mr: 0.5 }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Remove Field">
+                              <IconButton
+                                edge="end"
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveField(field.field_id)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                           </ListItemSecondaryAction>
                         </ListItem>
                         {index < profileFields.length - 1 && <Divider />}
@@ -805,14 +1024,24 @@ const OutputProfileManagement = () => {
 
             {/* Available Fields */}
             <Grid item xs={12} md={5}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                Available Fields
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Available Fields
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenNewFieldDialog}
+                  variant="outlined"
+                >
+                  Create New Field
+                </Button>
+              </Box>
               <Paper variant="outlined" sx={{ maxHeight: 400, overflow: 'auto' }}>
                 <List dense>
                   {availableFields.length === 0 ? (
                     <ListItem>
-                      <ListItemText primary="All fields are included" secondary="No more fields available" />
+                      <ListItemText primary="All fields are included" secondary="Click 'Create New Field' to add more" />
                     </ListItem>
                   ) : (
                     availableFields.map((field, index) => (
@@ -882,6 +1111,232 @@ const OutputProfileManagement = () => {
             disabled={!copyData.target_client_id}
           >
             Copy Profile
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Field Dialog */}
+      <Dialog open={openEditFieldDialog} onClose={handleCloseEditField} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Edit Field - {editingField?.field_display_name || editingField?.field_name}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                label="Custom Label"
+                fullWidth
+                value={fieldFormData.custom_label}
+                onChange={(e) => setFieldFormData({ ...fieldFormData, custom_label: e.target.value })}
+                helperText="Leave empty to use default field name"
+                placeholder={editingField?.field_display_name}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={fieldFormData.is_required}
+                    onChange={(e) => setFieldFormData({ ...fieldFormData, is_required: e.target.checked })}
+                  />
+                }
+                label="Required Field"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={fieldFormData.is_included}
+                    onChange={(e) => setFieldFormData({ ...fieldFormData, is_included: e.target.checked })}
+                  />
+                }
+                label="Include in Output"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Default Value"
+                fullWidth
+                value={fieldFormData.default_value}
+                onChange={(e) => setFieldFormData({ ...fieldFormData, default_value: e.target.value })}
+                helperText="Value to use when field is empty"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Transform Type</InputLabel>
+                <Select
+                  value={fieldFormData.transform_type}
+                  label="Transform Type"
+                  onChange={(e) => setFieldFormData({ ...fieldFormData, transform_type: e.target.value })}
+                >
+                  <MenuItem value="none">None</MenuItem>
+                  <MenuItem value="uppercase">Uppercase</MenuItem>
+                  <MenuItem value="lowercase">Lowercase</MenuItem>
+                  <MenuItem value="titlecase">Title Case</MenuItem>
+                  <MenuItem value="date_format">Date Format</MenuItem>
+                  <MenuItem value="number_format">Number Format</MenuItem>
+                  <MenuItem value="currency">Currency</MenuItem>
+                  <MenuItem value="prefix">Add Prefix</MenuItem>
+                  <MenuItem value="suffix">Add Suffix</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            {fieldFormData.transform_type === 'date_format' && (
+              <Grid item xs={12}>
+                <TextField
+                  label="Date Format Pattern"
+                  fullWidth
+                  value={fieldFormData.transform_config?.format || ''}
+                  onChange={(e) => setFieldFormData({
+                    ...fieldFormData,
+                    transform_config: { ...fieldFormData.transform_config, format: e.target.value }
+                  })}
+                  helperText="e.g., YYYY-MM-DD, MM/DD/YYYY"
+                />
+              </Grid>
+            )}
+            {fieldFormData.transform_type === 'prefix' && (
+              <Grid item xs={12}>
+                <TextField
+                  label="Prefix Text"
+                  fullWidth
+                  value={fieldFormData.transform_config?.prefix || ''}
+                  onChange={(e) => setFieldFormData({
+                    ...fieldFormData,
+                    transform_config: { ...fieldFormData.transform_config, prefix: e.target.value }
+                  })}
+                />
+              </Grid>
+            )}
+            {fieldFormData.transform_type === 'suffix' && (
+              <Grid item xs={12}>
+                <TextField
+                  label="Suffix Text"
+                  fullWidth
+                  value={fieldFormData.transform_config?.suffix || ''}
+                  onChange={(e) => setFieldFormData({
+                    ...fieldFormData,
+                    transform_config: { ...fieldFormData.transform_config, suffix: e.target.value }
+                  })}
+                />
+              </Grid>
+            )}
+            {fieldFormData.transform_type === 'currency' && (
+              <>
+                <Grid item xs={6}>
+                  <TextField
+                    label="Currency Symbol"
+                    fullWidth
+                    value={fieldFormData.transform_config?.symbol || '$'}
+                    onChange={(e) => setFieldFormData({
+                      ...fieldFormData,
+                      transform_config: { ...fieldFormData.transform_config, symbol: e.target.value }
+                    })}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    label="Decimal Places"
+                    fullWidth
+                    type="number"
+                    value={fieldFormData.transform_config?.decimals || 2}
+                    onChange={(e) => setFieldFormData({
+                      ...fieldFormData,
+                      transform_config: { ...fieldFormData.transform_config, decimals: parseInt(e.target.value) }
+                    })}
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditField}>Cancel</Button>
+          <Button onClick={handleUpdateField} variant="contained">
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create New Field Dialog */}
+      <Dialog open={openNewFieldDialog} onClose={handleCloseNewFieldDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Field for {selectedProfile?.category_name}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                label="Field Name (snake_case)"
+                fullWidth
+                required
+                value={newFieldData.field_name}
+                onChange={(e) => setNewFieldData({
+                  ...newFieldData,
+                  field_name: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+                })}
+                helperText="Internal field identifier (e.g., patient_name, claim_id)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Display Name"
+                fullWidth
+                required
+                value={newFieldData.field_display_name}
+                onChange={(e) => setNewFieldData({ ...newFieldData, field_display_name: e.target.value })}
+                helperText="Human-readable name shown in outputs"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Field Type</InputLabel>
+                <Select
+                  value={newFieldData.field_type}
+                  label="Field Type"
+                  onChange={(e) => setNewFieldData({ ...newFieldData, field_type: e.target.value })}
+                >
+                  <MenuItem value="string">String (Text)</MenuItem>
+                  <MenuItem value="number">Number</MenuItem>
+                  <MenuItem value="date">Date</MenuItem>
+                  <MenuItem value="boolean">Boolean (Yes/No)</MenuItem>
+                  <MenuItem value="currency">Currency</MenuItem>
+                  <MenuItem value="array">Array (List)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={newFieldData.is_required}
+                    onChange={(e) => setNewFieldData({ ...newFieldData, is_required: e.target.checked })}
+                  />
+                }
+                label="Required Field"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Description"
+                fullWidth
+                multiline
+                rows={2}
+                value={newFieldData.description}
+                onChange={(e) => setNewFieldData({ ...newFieldData, description: e.target.value })}
+                helperText="Brief description of what this field captures"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseNewFieldDialog}>Cancel</Button>
+          <Button
+            onClick={handleCreateNewField}
+            variant="contained"
+            disabled={!newFieldData.field_name || !newFieldData.field_display_name}
+          >
+            Create & Add to Profile
           </Button>
         </DialogActions>
       </Dialog>

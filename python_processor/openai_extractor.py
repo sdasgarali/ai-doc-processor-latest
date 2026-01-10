@@ -51,11 +51,14 @@ class OpenAIExtractor:
         self.temperature = config.openai.temperature
 
     def extract_data(self, raw_data: Dict, doc_category: DocumentCategory,
-                     filename: str) -> ExtractionResult:
+                     filename: str, custom_prompt: str = None) -> ExtractionResult:
         """Extract structured data based on document category"""
         text = raw_data.get('text', '')
         total_pages = raw_data.get('pages', 1)
         page_details = raw_data.get('page_details', [])
+
+        # Store custom prompt for use in prompt generation
+        self._custom_prompt = custom_prompt
 
         # Check if chunking is needed
         needs_chunking = (
@@ -362,13 +365,26 @@ Extract ALL records you find in this chunk."""
         """Get system and user prompts based on document category"""
 
         if doc_category == DocumentCategory.EOB:
-            return self._get_eob_prompts(processed_data, filename, total_pages)
+            system_prompt, user_prompt = self._get_eob_prompts(processed_data, filename, total_pages)
         elif doc_category == DocumentCategory.FACESHEET:
-            return self._get_facesheet_prompts(processed_data, filename, total_pages)
+            system_prompt, user_prompt = self._get_facesheet_prompts(processed_data, filename, total_pages)
         elif doc_category == DocumentCategory.INVOICE:
-            return self._get_invoice_prompts(processed_data, filename, total_pages)
+            system_prompt, user_prompt = self._get_invoice_prompts(processed_data, filename, total_pages)
         else:
             raise ValueError(f"Unknown document category: {doc_category}")
+
+        # Apply custom extraction prompt if provided (from output profile)
+        if hasattr(self, '_custom_prompt') and self._custom_prompt:
+            logger.info("Applying custom extraction prompt from output profile")
+            # Prepend custom instructions to the user prompt
+            user_prompt = f"""CUSTOM EXTRACTION INSTRUCTIONS:
+{self._custom_prompt}
+
+---
+
+{user_prompt}"""
+
+        return system_prompt, user_prompt
 
     def _get_eob_prompts(self, data: Dict, filename: str, total_pages: int) -> Tuple[str, str]:
         """Get EOB extraction prompts"""

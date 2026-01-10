@@ -15,7 +15,27 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [clientInactive, setClientInactive] = useState(false);
+  const [clientInactiveMessage, setClientInactiveMessage] = useState('');
   const isLoggingIn = useRef(false);
+
+  // Set up axios interceptor to handle client inactive responses
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 403 && error.response?.data?.clientInactive) {
+          setClientInactive(true);
+          setClientInactiveMessage(error.response.data.message || 'Your client account is inactive.');
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
 
   useEffect(() => {
     // Set axios defaults
@@ -64,7 +84,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setClientInactive(false);
+    setClientInactiveMessage('');
     delete axios.defaults.headers.common['Authorization'];
+  };
+
+  const clearClientInactive = () => {
+    setClientInactive(false);
+    setClientInactiveMessage('');
   };
 
   const updateProfile = async (profileData) => {
@@ -81,7 +108,10 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     isAuthenticated: !!user,
     isAdmin: user?.user_role === 'admin' || user?.user_role === 'superadmin',
-    isSuperAdmin: user?.user_role === 'superadmin'
+    isSuperAdmin: user?.user_role === 'superadmin',
+    clientInactive,
+    clientInactiveMessage,
+    clearClientInactive
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

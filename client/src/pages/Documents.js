@@ -387,7 +387,6 @@ const Documents = () => {
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Process ID</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Document Name</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Client</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Model</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Category</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Pages</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>Records</TableCell>
@@ -401,13 +400,13 @@ const Documents = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 13 : 12} align="center" sx={{ py: 5 }}>
+                <TableCell colSpan={isAdmin ? 12 : 11} align="center" sx={{ py: 5 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : filteredDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 13 : 12} align="center" sx={{ py: 5 }}>
+                <TableCell colSpan={isAdmin ? 12 : 11} align="center" sx={{ py: 5 }}>
                   <Typography color="text.secondary">No documents found</Typography>
                 </TableCell>
               </TableRow>
@@ -445,11 +444,6 @@ const Documents = () => {
                   <TableCell>
                     <Typography variant="body2">
                       {doc.client_name || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {doc.effective_model_id ? `Model ID: ${doc.effective_model_id}` : '-'}
                     </Typography>
                   </TableCell>
                   <TableCell>

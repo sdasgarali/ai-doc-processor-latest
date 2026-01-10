@@ -11,8 +11,8 @@ router.get('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res) 
     const { client_id, category_id, is_default, is_active = true, page = 1, limit = 20 } = req.query;
 
     let sql = `
-      SELECT op.*,
-             dc.category_name, dc.category_display_name,
+      SELECT op.*, op.output_format as output_formats,
+             dc.category_name, dc.category_description,
              c.client_name,
              up.first_name as created_by_name, up.last_name as created_by_lastname
       FROM output_profile op
@@ -81,8 +81,8 @@ router.get('/:profileId', verifyToken, async (req, res) => {
 
     // Get profile
     const profileResult = await query(`
-      SELECT op.*,
-             dc.category_name, dc.category_display_name,
+      SELECT op.*, op.output_format as output_formats,
+             dc.category_name, dc.category_description,
              c.client_name
       FROM output_profile op
       LEFT JOIN doc_category dc ON op.doc_category_id = dc.category_id
@@ -129,8 +129,8 @@ router.get('/effective/:clientId/:categoryId', verifyToken, async (req, res) => 
 
     // Try to find client-specific profile first
     let profile = await query(`
-      SELECT op.*,
-             dc.category_name, dc.category_display_name,
+      SELECT op.*, op.output_format as output_formats,
+             dc.category_name, dc.category_description,
              'client' as profile_source
       FROM output_profile op
       LEFT JOIN doc_category dc ON op.doc_category_id = dc.category_id
@@ -140,8 +140,8 @@ router.get('/effective/:clientId/:categoryId', verifyToken, async (req, res) => 
     // Fall back to default profile
     if (profile.length === 0) {
       profile = await query(`
-        SELECT op.*,
-               dc.category_name, dc.category_display_name,
+        SELECT op.*, op.output_format as output_formats,
+               dc.category_name, dc.category_description,
                'default' as profile_source
         FROM output_profile op
         LEFT JOIN doc_category dc ON op.doc_category_id = dc.category_id
@@ -191,7 +191,8 @@ router.post('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res)
       client_id,
       doc_category_id,
       is_default = false,
-      output_format = 'csv',
+      output_format,
+      output_formats,
       csv_delimiter = ',',
       csv_quote_char = '"',
       include_header = true,
@@ -199,8 +200,17 @@ router.post('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res)
       number_format = '0.00',
       currency_symbol = '$',
       null_value = '',
-      description
+      description,
+      extraction_prompt
     } = req.body;
+
+    // Handle output formats - support both single format and array of formats
+    let formatsValue = 'csv';
+    if (output_formats) {
+      formatsValue = Array.isArray(output_formats) ? output_formats.join(',') : output_formats;
+    } else if (output_format) {
+      formatsValue = output_format;
+    }
 
     // Validate required fields
     if (!profile_name || !doc_category_id) {
@@ -255,14 +265,14 @@ router.post('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res)
         profile_name, client_id, doc_category_id, is_default,
         output_format, csv_delimiter, csv_quote_char, include_header,
         date_format, number_format, currency_symbol, null_value,
-        description, is_active, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+        description, extraction_prompt, is_active, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
     `, [
       profile_name,
       client_id || null,
       doc_category_id,
       is_default ? 1 : 0,
-      output_format,
+      formatsValue,
       csv_delimiter,
       csv_quote_char,
       include_header ? 1 : 0,
@@ -271,7 +281,8 @@ router.post('/', verifyToken, checkRole('admin', 'superadmin'), async (req, res)
       currency_symbol,
       null_value,
       description || null,
-      req.user.userId
+      extraction_prompt || null,
+      req.user.userid
     ]);
 
     res.status(201).json({
@@ -296,6 +307,7 @@ router.put('/:profileId', verifyToken, checkRole('admin', 'superadmin'), async (
     const {
       profile_name,
       output_format,
+      output_formats,
       csv_delimiter,
       csv_quote_char,
       include_header,
@@ -304,6 +316,7 @@ router.put('/:profileId', verifyToken, checkRole('admin', 'superadmin'), async (
       currency_symbol,
       null_value,
       description,
+      extraction_prompt,
       is_active
     } = req.body;
 
@@ -321,7 +334,15 @@ router.put('/:profileId', verifyToken, checkRole('admin', 'superadmin'), async (
     const params = [];
 
     if (profile_name !== undefined) { updates.push('profile_name = ?'); params.push(profile_name); }
-    if (output_format !== undefined) { updates.push('output_format = ?'); params.push(output_format); }
+    // Handle output formats - support both single format and array of formats
+    if (output_formats !== undefined) {
+      const formatsValue = Array.isArray(output_formats) ? output_formats.join(',') : output_formats;
+      updates.push('output_format = ?');
+      params.push(formatsValue);
+    } else if (output_format !== undefined) {
+      updates.push('output_format = ?');
+      params.push(output_format);
+    }
     if (csv_delimiter !== undefined) { updates.push('csv_delimiter = ?'); params.push(csv_delimiter); }
     if (csv_quote_char !== undefined) { updates.push('csv_quote_char = ?'); params.push(csv_quote_char); }
     if (include_header !== undefined) { updates.push('include_header = ?'); params.push(include_header ? 1 : 0); }
@@ -330,6 +351,7 @@ router.put('/:profileId', verifyToken, checkRole('admin', 'superadmin'), async (
     if (currency_symbol !== undefined) { updates.push('currency_symbol = ?'); params.push(currency_symbol); }
     if (null_value !== undefined) { updates.push('null_value = ?'); params.push(null_value); }
     if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (extraction_prompt !== undefined) { updates.push('extraction_prompt = ?'); params.push(extraction_prompt || null); }
     if (is_active !== undefined) { updates.push('is_active = ?'); params.push(is_active ? 1 : 0); }
 
     if (updates.length === 0) {
@@ -689,11 +711,11 @@ router.post('/copy', verifyToken, checkRole('admin', 'superadmin'), async (req, 
       `, [
         profile_name || `${sourceProfile[0].profile_name} - Custom`,
         target_client_id,
-        req.user.userId,
+        req.user.userid,
         source_profile_id
       ]);
 
-      newProfileId = profileResult.insertId;
+      newProfileId = profileResult[0].insertId;
 
       // Copy all fields
       await conn.query(`
@@ -732,8 +754,8 @@ router.post('/copy', verifyToken, checkRole('admin', 'superadmin'), async (req, 
 router.get('/defaults/all', verifyToken, async (req, res) => {
   try {
     const profiles = await query(`
-      SELECT op.*,
-             dc.category_name, dc.category_display_name,
+      SELECT op.*, op.output_format as output_formats,
+             dc.category_name, dc.category_description,
              (SELECT COUNT(*) FROM output_profile_field WHERE profile_id = op.profile_id) as field_count
       FROM output_profile op
       LEFT JOIN doc_category dc ON op.doc_category_id = dc.category_id

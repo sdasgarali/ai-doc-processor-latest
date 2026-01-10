@@ -84,14 +84,9 @@ const CONFIG_SECTIONS = {
       { key: 'DOCUMENT_AI_TIMEOUT', label: 'Timeout (ms)', type: 'number', description: 'Document AI timeout in milliseconds' },
       { key: 'USE_BATCH_PROCESSING', label: 'Use Batch Processing', type: 'select', options: ['YES', 'NO'], description: 'Use batch API for cost savings' }
     ]
-  },
-  extraction: {
-    title: 'Extraction Settings',
-    description: 'Custom extraction prompt (optional, overrides default)',
-    keys: [
-      { key: 'EXTRACTION_PROMPT', label: 'Custom Extraction Prompt', type: 'textarea', description: 'Custom prompt for data extraction (leave empty for default)' }
-    ]
   }
+  // Note: Extraction Settings have been moved to Output Profile Management
+  // Each output profile can have its own custom extraction prompt
 };
 
 const ProcessingEngineConfig = () => {
