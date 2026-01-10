@@ -587,7 +587,7 @@ function LandingPage() {
                 <AutoAwesomeIcon sx={{ color: 'white', fontSize: 24 }} />
               </Box>
               <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
-                Docu<span className="text-gradient">AI</span>
+                Docu<span className="text-gradient">Parse</span>
               </Typography>
             </Box>
 
