@@ -488,5 +488,111 @@ Migrating database from MySQL to Supabase (PostgreSQL) and configuring for Verce
 
 ---
 
+### 9. API Fixes & UAT Testing (2026-01-10)
+
+Complete API refactoring for Supabase compatibility and comprehensive UAT testing.
+
+#### Supabase API Compatibility Fixes
+
+**Issue:** Supabase REST API doesn't support SQL JOIN queries - all routes using JOINs returned errors.
+
+**Solution:** Refactored all routes to use in-memory data enrichment pattern:
+1. Fetch data from each table separately
+2. Create lookup maps for related data
+3. Enrich records in memory
+
+**Files Fixed:**
+
+| File | Endpoints Fixed |
+|------|----------------|
+| `routes/documents.js` | GET /, GET /:processId |
+| `routes/reports.js` | GET /client-usage, GET /client-usage/export |
+| `routes/admin.js` | GET /users, GET /users/:userid, GET /fields, GET /models, GET /models/:modelId, GET /model-versions, GET /audit-logs, GET /clients |
+| `routes/billing.js` | GET /mail-logs |
+| `routes/permissions.js` | GET /roles/:role/permissions, GET /users/:userid/permissions |
+| `routes/processingConfig.js` | GET / |
+
+**Other Fixes:**
+- Added missing route registrations in `api/index.js` for `/api/processing-config` and `/api/permissions`
+- Fixed "column client.1 does not exist" error in client list query
+- Fixed JWT expiration handling with fallback to '24h' when env var is empty
+- Fixed boolean syntax differences (MySQL 1/0 vs PostgreSQL true/false)
+
+#### Processing Engine Configuration
+
+Default configuration values populated in `processing_config` table:
+
+| Config Key | Value | Description |
+|------------|-------|-------------|
+| OCR_PROVIDER | google | OCR Provider |
+| LLM_PROVIDER | openai | LLM Provider |
+| DOCAI_PROJECT_ID | optical-valor-477121-d0 | GCP Project ID |
+| DOCAI_LOCATION | us | GCP Region |
+| DOCAI_PROCESSOR_ID | c159d8b2fb74ffc9 | Document AI Processor |
+| OPENAI_MODEL | gpt-4o | OpenAI Model |
+| OPENAI_MAX_TOKENS | 16384 | Max tokens |
+| MAX_PAGES_PER_SPLIT | 15 | PDF split threshold |
+| MAX_PARALLEL_WORKERS | 8 | Parallel processing |
+
+Scripts created: `setup-default-config.js`, `check-config.js`
+
+#### Test User Credentials
+
+| Role | Email | Password | Client |
+|------|-------|----------|--------|
+| SuperAdmin | admin@docuparse.com | Admin123! | - |
+| Client | testclient@docuparse.com | TestClient123! | Demo Client (ID: 7) |
+
+Script created: `create-test-user.js`
+
+#### Testing Documentation
+
+| Document | Description |
+|----------|-------------|
+| `TEST_PLAN.md` | Comprehensive test plan with 40+ test cases across 13 modules |
+| `tests/api-tests.js` | Automated API regression test suite (19 tests) |
+| `TEST_REPORT.md` | Detailed UAT test report |
+
+#### Final Test Results
+
+```
+============================================================
+TEST SUMMARY
+============================================================
+Total Tests: 19
+Passed: 19
+Failed: 0
+Success Rate: 100.0%
+============================================================
+```
+
+**Status: ALL TESTS PASSED - PRODUCTION READY**
+
+#### Data Migration Summary
+
+| Table | Records Migrated |
+|-------|------------------|
+| client | 11 |
+| doc_category | 5 |
+| user_profile | 11 |
+| permissions | 47 |
+| role_permissions | 104 |
+| field_table | 25 |
+| output_profile | 4 |
+| output_profile_field | 48 |
+| processing_config | 26 |
+
+#### Running Regression Tests
+
+```bash
+# Run all API tests
+node tests/api-tests.js
+
+# Or with custom URL
+TEST_URL=https://docuparse.vercel.app node tests/api-tests.js
+```
+
+---
+
 ## Last Updated
-2026-01-10 - Supabase migration and Vercel deployment configuration
+2026-01-10 - API fixes for Supabase compatibility & UAT testing completed
