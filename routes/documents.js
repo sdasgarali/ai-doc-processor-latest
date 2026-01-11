@@ -177,10 +177,15 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
       console.log(`⚠️ No PROCESSOR_WEBHOOK_URL configured. Document uploaded but not processed.`);
 
       // Update status to indicate processing is pending
-      await query(
-        'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
-        ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
-      ).catch(err => console.error('Error updating status:', err));
+      try {
+        const updateResult = await query(
+          'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
+          ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
+        );
+        console.log(`✓ Updated status to Pending for process_id: ${processId}, result:`, updateResult);
+      } catch (updateErr) {
+        console.error('Error updating status to Pending:', updateErr);
+      }
 
       res.status(201).json({
         success: true,
