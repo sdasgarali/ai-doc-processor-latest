@@ -5,8 +5,6 @@ const path = require('path');
 const fs = require('fs').promises;
 const { query, transaction } = require('../config/database');
 const { verifyToken, checkRole } = require('../middleware/auth');
-const { processDocument } = require('../services/documentProcessor');
-const { uploadToGoogleDrive } = require('../services/googleDrive');
 const moment = require('moment-timezone');
 const axios = require('axios');
 
@@ -124,82 +122,74 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
     // Get default model_id if not provided
     const selectedModelId = model_id || 2; // Default to GPT-4o-mini (model_id = 2)
 
-    // Upload to Google Drive (async, non-blocking)
-    let driveFileId = null;
-    uploadToGoogleDrive(newPath, newFilename, processId, false)
-      .then(async driveResult => {
-        if (driveResult.fileId) {
-          driveFileId = driveResult.fileId;
+    // Trigger document processing via Python processor webhook
+    const processorUrl = process.env.PROCESSOR_WEBHOOK_URL;
 
-          // Update database with Google Drive file ID
-          await query(
-            'UPDATE document_processed SET gdrive_file_id = ? WHERE process_id = ?',
-            [driveResult.fileId, processId]
-          ).catch(err => console.error('Error updating Google Drive file ID:', err));
+    if (processorUrl) {
+      // Call Python processor webhook synchronously
+      try {
+        console.log(`Triggering Python processor at: ${processorUrl}`);
 
-          console.log(`✓ Uploaded to Google Drive: ${driveResult.fileName} (ID: ${driveResult.fileId})`);
+        const processorResponse = await axios.post(
+          `${processorUrl}/webhook/eob-process`,
+          {
+            processId: processId,
+            filename: newFilename,
+            originalFilename: req.file.originalname,
+            localFilePath: newPath,
+            userid: req.user.userid,
+            clientId: req.user.client_id,
+            sessionId: sessionId,
+            modelId: selectedModelId,
+            docCategory: parseInt(doc_category)
+          },
+          { timeout: 30000 } // 30 second timeout for processor acknowledgment
+        );
 
-          // Trigger n8n webhook AFTER successful Google Drive upload
-          try {
-            const webhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/eob-process';
+        console.log(`✓ Triggered Python processor for process_id: ${processId}`);
 
-            await axios.post(
-              webhookUrl,
-              {
-                processId: processId,
-                filename: newFilename,
-                originalFilename: req.file.originalname,
-                driveFileId: driveResult.fileId,
-                userid: req.user.userid,
-                clientId: req.user.client_id,
-                sessionId: sessionId,
-                modelId: selectedModelId,
-                docCategory: doc_category
-              },
-              { timeout: 5000 }
-            );
+        res.status(201).json({
+          success: true,
+          message: 'Document uploaded and processing started',
+          process_id: processId,
+          session_id: sessionId,
+          processor_status: processorResponse.data?.status || 'Processing'
+        });
+      } catch (processorError) {
+        console.error('Failed to trigger Python processor:', processorError.message);
 
-            console.log(`✓ Triggered n8n processing for process_id: ${processId}, model: ${selectedModelId}`);
-          } catch (webhookError) {
-            console.error('Failed to trigger n8n webhook:', webhookError.message);
-
-            // Update status to Failed if webhook fails
-            await query(
-              'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
-              ['Failed', 'Failed to trigger processing workflow: ' + webhookError.message, processId]
-            ).catch(err => console.error('Error updating status:', err));
-          }
-        }
-      })
-      .catch(err => {
-        console.warn('Google Drive upload failed:', err.message);
-
-        // Update status to Failed if Google Drive upload fails
-        query(
+        // Update status to Failed if processor trigger fails
+        await query(
           'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
-          ['Failed', 'Google Drive upload failed: ' + err.message, processId]
+          ['Failed', 'Failed to trigger processor: ' + processorError.message, processId]
         ).catch(err => console.error('Error updating status:', err));
+
+        res.status(201).json({
+          success: true,
+          message: 'Document uploaded but processing failed to start',
+          process_id: processId,
+          session_id: sessionId,
+          error: processorError.message
+        });
+      }
+    } else {
+      // No processor URL configured - document uploaded but needs manual processing
+      console.log(`⚠️ No PROCESSOR_WEBHOOK_URL configured. Document uploaded but not processed.`);
+
+      // Update status to indicate processing is pending
+      await query(
+        'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
+        ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
+      ).catch(err => console.error('Error updating status:', err));
+
+      res.status(201).json({
+        success: true,
+        message: 'Document uploaded. Processing requires PROCESSOR_WEBHOOK_URL configuration.',
+        process_id: processId,
+        session_id: sessionId,
+        warning: 'No processor configured'
       });
-
-    // DISABLED - Processing now handled by n8n workflow via webhook
-    // processDocument(processId, req.file.path, {
-    //   userid: req.user.userid,
-    //   client_id: req.user.client_id,
-    //   model_id: model_id || null,
-    //   session_id: sessionId,
-    //   doc_category: doc_category,
-    //   original_filename: req.file.originalname,
-    //   timezone: req.user.timezone || 'UTC'
-    // }).catch(error => {
-    //   console.error('Background processing error:', error);
-    // });
-
-    res.status(201).json({
-      success: true,
-      message: 'Document uploaded successfully and processing started',
-      process_id: processId,
-      session_id: sessionId
-    });
+    }
   } catch (error) {
     console.error('Upload error:', error);
     console.error('Error stack:', error.stack);
@@ -842,8 +832,8 @@ router.delete('/:processId', verifyToken, checkRole('admin', 'superadmin'), asyn
   }
 });
 
-// Receive results from Python processor (no authentication required - called by Python processor)
-router.post('/:processId/n8n-results', async (req, res) => {
+// Receive processing results from Python processor (no authentication required - called by Python processor)
+router.post('/:processId/processing-results', async (req, res) => {
   try {
     const { processId } = req.params;
     const {
@@ -988,7 +978,7 @@ router.post('/:processId/n8n-results', async (req, res) => {
       processId: processId
     });
   } catch (error) {
-    console.error('Update n8n results error:', error);
+    console.error('Update processing results error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating results: ' + error.message

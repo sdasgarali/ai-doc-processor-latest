@@ -539,7 +539,7 @@ class DocumentOrchestrator:
         for attempt in range(max_retries):
             try:
                 response = requests.post(
-                    f"{config.server.backend_url}/api/documents/{result.process_id}/n8n-results",
+                    f"{config.server.backend_url}/api/documents/{result.process_id}/processing-results",
                     json=payload,
                     timeout=10
                 )
