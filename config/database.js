@@ -10,10 +10,17 @@ if (useSupabase) {
   // Use Supabase REST API (works with Vercel serverless)
   const { createClient } = require('@supabase/supabase-js');
 
+  // Use service role key if available (bypasses RLS), otherwise use anon key
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    supabaseKey
   );
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('✓ Using Supabase service role key (RLS bypassed)');
+  }
 
   // Test connection
   const testConnection = async () => {

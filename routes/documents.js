@@ -202,13 +202,15 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     console.error('Upload error:', error);
+    console.error('Error stack:', error.stack);
     // Clean up file if exists
     if (req.file) {
       await fs.unlink(req.file.path).catch(() => {});
     }
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error uploading document.' 
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading document.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
