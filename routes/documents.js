@@ -11,9 +11,16 @@ const moment = require('moment-timezone');
 const axios = require('axios');
 
 // Configure multer for file uploads
+// Use /tmp for serverless environments (Vercel), fallback to ./uploads for local dev
+const getUploadDir = () => {
+  if (process.env.UPLOAD_DIR) return process.env.UPLOAD_DIR;
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') return '/tmp/uploads';
+  return './uploads';
+};
+
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = getUploadDir();
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       cb(null, uploadDir);
@@ -96,7 +103,7 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
 
     // Rename file to include process_id
     const newFilename = `${processId}_${req.file.originalname}`;
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = getUploadDir();
     const newPath = path.join(uploadDir, newFilename);
 
     try {
