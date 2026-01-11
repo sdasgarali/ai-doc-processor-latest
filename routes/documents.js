@@ -176,10 +176,15 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
     } else {
       // No processor URL configured - document uploaded but needs manual processing
       console.log(`⚠️ No PROCESSOR_WEBHOOK_URL configured. Document uploaded but not processed.`);
+      console.log(`DB config - isSupabase: ${db.isSupabase}, hasSupabase: ${!!db.supabase}`);
 
       // Update status to indicate processing is pending - use Supabase client directly
+      let updateSuccess = false;
+      let updateError = null;
+
       try {
         if (db.isSupabase && db.supabase) {
+          console.log(`Attempting Supabase update for process_id: ${processId}`);
           const { data, error } = await db.supabase
             .from('document_processed')
             .update({
@@ -190,19 +195,24 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
             .select();
 
           if (error) {
-            console.error('Supabase update error:', error);
+            console.error('Supabase update error:', JSON.stringify(error));
+            updateError = error.message || JSON.stringify(error);
           } else {
             console.log(`✓ Updated status to Pending for process_id: ${processId}, rows:`, data?.length || 0);
+            updateSuccess = data?.length > 0;
           }
         } else {
+          console.log(`Using SQL query for update, isSupabase: ${db.isSupabase}`);
           const updateResult = await query(
             'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
             ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
           );
           console.log(`✓ Updated status to Pending for process_id: ${processId}, result:`, updateResult);
+          updateSuccess = true;
         }
       } catch (updateErr) {
-        console.error('Error updating status to Pending:', updateErr);
+        console.error('Error updating status to Pending:', updateErr.message || updateErr);
+        updateError = updateErr.message || String(updateErr);
       }
 
       res.status(201).json({
@@ -210,7 +220,8 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
         message: 'Document uploaded. Processing requires PROCESSOR_WEBHOOK_URL configuration.',
         process_id: processId,
         session_id: sessionId,
-        warning: 'No processor configured'
+        warning: 'No processor configured',
+        debug: { updateSuccess, updateError, isSupabase: db.isSupabase }
       });
     }
   } catch (error) {
