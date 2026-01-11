@@ -303,76 +303,126 @@ class InvoiceService {
    * Get invoice by ID
    */
   async getInvoiceById(invoiceId) {
-    const results = await query(
-      `SELECT i.*, 
-              c.client_name, c.email as client_email,
-              u.total_documents, u.total_pages, u.period_start, u.period_end
-       FROM invoice i
-       JOIN client c ON i.client_id = c.client_id
-       LEFT JOIN client_usage u ON i.usage_id = u.usage_id
-       WHERE i.invoice_id = ?`,
-      [invoiceId]
-    );
+    // Fetch invoice
+    const invoices = await query('SELECT * FROM invoice WHERE invoice_id = ?', [invoiceId]);
+    if (invoices.length === 0) return null;
 
-    return results[0] || null;
+    const invoice = invoices[0];
+
+    // Fetch related data
+    let client = null, usage = null;
+    try {
+      const clients = await query('SELECT client_id, client_name, email FROM client WHERE client_id = ?', [invoice.client_id]);
+      client = clients[0] || {};
+    } catch (e) { console.warn('Error fetching client:', e.message); }
+
+    if (invoice.usage_id) {
+      try {
+        const usages = await query('SELECT usage_id, total_documents, total_pages, period_start, period_end FROM client_usage WHERE usage_id = ?', [invoice.usage_id]);
+        usage = usages[0] || {};
+      } catch (e) { console.warn('Error fetching usage:', e.message); }
+    }
+
+    return {
+      ...invoice,
+      client_name: client?.client_name || null,
+      client_email: client?.email || null,
+      total_documents: usage?.total_documents || null,
+      total_pages: usage?.total_pages || null,
+      period_start: usage?.period_start || null,
+      period_end: usage?.period_end || null
+    };
   }
 
   /**
    * Get invoice by payment link
    */
   async getInvoiceByPaymentLink(paymentLink) {
-    const results = await query(
-      `SELECT i.*, 
-              c.client_name, c.email as client_email
-       FROM invoice i
-       JOIN client c ON i.client_id = c.client_id
-       WHERE i.payment_link = ? 
-       AND i.payment_link_expires_at > NOW()
-       AND i.status != 'paid'`,
-      [paymentLink]
-    );
+    // Fetch invoice by payment link
+    const invoices = await query('SELECT * FROM invoice WHERE payment_link = ?', [paymentLink]);
+    if (invoices.length === 0) return null;
 
-    return results[0] || null;
+    const invoice = invoices[0];
+
+    // Check expiration and status
+    if (new Date(invoice.payment_link_expires_at) <= new Date() || invoice.status === 'paid') {
+      return null;
+    }
+
+    // Fetch client
+    let client = {};
+    try {
+      const clients = await query('SELECT client_id, client_name, email FROM client WHERE client_id = ?', [invoice.client_id]);
+      client = clients[0] || {};
+    } catch (e) { console.warn('Error fetching client:', e.message); }
+
+    return {
+      ...invoice,
+      client_name: client.client_name || null,
+      client_email: client.email || null
+    };
   }
 
   /**
    * Get all invoices with filters
    */
   async getInvoices(filters = {}) {
-    let sql = `
-      SELECT i.*, 
-             c.client_name, c.email as client_email,
-             u.total_documents, u.total_pages, u.period_start, u.period_end
-      FROM invoice i
-      JOIN client c ON i.client_id = c.client_id
-      LEFT JOIN client_usage u ON i.usage_id = u.usage_id
-      WHERE 1=1
-    `;
-    const params = [];
+    // Fetch invoices
+    let invoices = await query('SELECT * FROM invoice');
 
+    // Apply filters in memory
     if (filters.client_id) {
-      sql += ' AND i.client_id = ?';
-      params.push(filters.client_id);
+      invoices = invoices.filter(i => i.client_id === parseInt(filters.client_id));
     }
 
     if (filters.status) {
-      sql += ' AND i.status = ?';
-      params.push(filters.status);
+      invoices = invoices.filter(i => i.status === filters.status);
     }
 
     if (filters.month) {
-      sql += ' AND DATE_FORMAT(i.invoice_date, "%Y-%m") = ?';
-      params.push(filters.month);
+      invoices = invoices.filter(i => {
+        const invoiceDate = new Date(i.invoice_date);
+        const yearMonth = `${invoiceDate.getFullYear()}-${String(invoiceDate.getMonth() + 1).padStart(2, '0')}`;
+        return yearMonth === filters.month;
+      });
     }
 
     if (filters.year) {
-      sql += ' AND YEAR(i.invoice_date) = ?';
-      params.push(filters.year);
+      const year = parseInt(filters.year);
+      invoices = invoices.filter(i => {
+        const invoiceDate = new Date(i.invoice_date);
+        return invoiceDate.getFullYear() === year;
+      });
     }
 
-    sql += ' ORDER BY i.invoice_date DESC';
+    // Sort by invoice_date DESC
+    invoices.sort((a, b) => new Date(b.invoice_date || 0) - new Date(a.invoice_date || 0));
 
-    return await query(sql, params);
+    // Fetch related data for enrichment
+    let clients = [], usages = [];
+    try { clients = await query('SELECT client_id, client_name, email FROM client'); } catch (e) { console.warn('Error fetching clients:', e.message); }
+    try { usages = await query('SELECT usage_id, total_documents, total_pages, period_start, period_end FROM client_usage'); } catch (e) { console.warn('Error fetching usages:', e.message); }
+
+    // Create lookup maps
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.client_id] = { client_name: c.client_name, client_email: c.email }; });
+    const usageMap = {};
+    usages.forEach(u => { usageMap[u.usage_id] = u; });
+
+    // Enrich invoices
+    return invoices.map(i => {
+      const client = clientMap[i.client_id] || {};
+      const usage = i.usage_id ? usageMap[i.usage_id] : {};
+      return {
+        ...i,
+        client_name: client.client_name || null,
+        client_email: client.client_email || null,
+        total_documents: usage.total_documents || null,
+        total_pages: usage.total_pages || null,
+        period_start: usage.period_start || null,
+        period_end: usage.period_end || null
+      };
+    });
   }
 
   /**

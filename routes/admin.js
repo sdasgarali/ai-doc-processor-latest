@@ -986,10 +986,28 @@ router.put('/openai-models/:modelId/pricing', verifyToken, checkRole('admin', 's
 // Get system configuration value by key (public endpoint for n8n)
 router.get('/config/:key', async (req, res) => {
   try {
-    const configs = await query(
-      'SELECT config_key, config_value, description FROM system_config WHERE config_key = ?',
-      [req.params.key]
-    );
+    // First try system_config table
+    let configs = [];
+    try {
+      configs = await query(
+        'SELECT config_key, config_value, description FROM system_config WHERE config_key = ?',
+        [req.params.key]
+      );
+    } catch (e) {
+      // system_config table might not exist, try processing_config
+    }
+
+    // If not found in system_config, try processing_config (for pricing configs)
+    if (configs.length === 0) {
+      try {
+        configs = await query(
+          'SELECT config_key, config_value, description FROM processing_config WHERE config_key = ? AND doc_category_id IS NULL',
+          [req.params.key]
+        );
+      } catch (e) {
+        console.error('Error checking processing_config:', e.message);
+      }
+    }
 
     if (configs.length === 0) {
       return res.status(404).json({
@@ -1051,11 +1069,33 @@ router.put('/config/:key', verifyToken, checkRole('admin', 'superadmin'), async 
       });
     }
 
-    // Check if config key exists
-    const existing = await query(
-      'SELECT config_key FROM system_config WHERE config_key = ?',
-      [req.params.key]
-    );
+    // Check if config key exists in system_config
+    let existing = [];
+    let useTable = 'system_config';
+
+    try {
+      existing = await query(
+        'SELECT config_key FROM system_config WHERE config_key = ?',
+        [req.params.key]
+      );
+    } catch (e) {
+      // system_config table might not exist
+    }
+
+    // If not found, check processing_config
+    if (existing.length === 0) {
+      try {
+        existing = await query(
+          'SELECT config_key FROM processing_config WHERE config_key = ? AND doc_category_id IS NULL',
+          [req.params.key]
+        );
+        if (existing.length > 0) {
+          useTable = 'processing_config';
+        }
+      } catch (e) {
+        console.error('Error checking processing_config:', e.message);
+      }
+    }
 
     if (existing.length === 0) {
       return res.status(404).json({
@@ -1064,16 +1104,23 @@ router.put('/config/:key', verifyToken, checkRole('admin', 'superadmin'), async 
       });
     }
 
-    await query(
-      'UPDATE system_config SET config_value = ?, updated_at = NOW() WHERE config_key = ?',
-      [value.toString(), req.params.key]
-    );
+    if (useTable === 'processing_config') {
+      await query(
+        'UPDATE processing_config SET config_value = ?, updated_at = NOW() WHERE config_key = ? AND doc_category_id IS NULL',
+        [value.toString(), req.params.key]
+      );
+    } else {
+      await query(
+        'UPDATE system_config SET config_value = ?, updated_at = NOW() WHERE config_key = ?',
+        [value.toString(), req.params.key]
+      );
+    }
 
-    console.log(`✓ Updated system config: ${req.params.key} = ${value}`);
+    console.log(`✓ Updated ${useTable} config: ${req.params.key} = ${value}`);
 
     res.json({
       success: true,
-      message: 'System configuration updated successfully'
+      message: 'Configuration updated successfully'
     });
   } catch (error) {
     console.error('Update system config error:', error);
