@@ -175,3 +175,34 @@ config/eob-extraction-system-*.json
 GOOGLE_DRIVE_SETUP.md
 .vercel
 .env*.local
+.env.production
+DocuParseSupabse_Credentials.txt
+python_processor/optical-valor-*.json
+
+# ===========================================
+# Database Dumps
+# ===========================================
+*.sql
+Dump*.sql
+
+# ===========================================
+# One-time Migration & Setup Scripts
+# ===========================================
+check-users.js
+create-admin.js
+migrate-data.js
+scripts/run-migration.js
+test-supabase.js
+test-output-profiles.js
+
+# ===========================================
+# Processing Results (local testing)
+# ===========================================
+python_processor/eob-results/
+
+# ===========================================
+# Windows/System Files
+# ===========================================
+nul
+*.config_id
+p2.config_id
