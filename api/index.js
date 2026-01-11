@@ -146,6 +146,7 @@ try {
 try {
   const processingConfigRoutes = require('../routes/processingConfig');
   app.use('/api/processing-config', processingConfigRoutes);
+  app.use('/api/admin/processing-config', processingConfigRoutes); // Also mount at /admin path for frontend compatibility
 } catch (err) {
   console.error('Failed to load processing config routes:', err.message);
   app.use('/api/processing-config', (req, res) => res.status(500).json({ error: 'Processing config routes failed to load', details: err.message }));
