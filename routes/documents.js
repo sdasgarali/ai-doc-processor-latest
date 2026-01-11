@@ -174,54 +174,42 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
         });
       }
     } else {
-      // No processor URL configured - document uploaded but needs manual processing
+      // No processor URL configured - document uploaded but can't be processed
       console.log(`⚠️ No PROCESSOR_WEBHOOK_URL configured. Document uploaded but not processed.`);
-      console.log(`DB config - isSupabase: ${db.isSupabase}, hasSupabase: ${!!db.supabase}`);
 
-      // Update status to indicate processing is pending - use Supabase client directly
-      let updateSuccess = false;
-      let updateError = null;
-
+      // Update status to Failed since no processor is available
+      // Valid enum values: 'In-Progress', 'Processed', 'Failed'
       try {
         if (db.isSupabase && db.supabase) {
-          console.log(`Attempting Supabase update for process_id: ${processId}`);
-          const { data, error } = await db.supabase
+          const { error } = await db.supabase
             .from('document_processed')
             .update({
-              processing_status: 'Pending',
-              error_message: 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.'
+              processing_status: 'Failed',
+              error_message: 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable to enable processing.'
             })
-            .eq('process_id', processId)
-            .select();
+            .eq('process_id', processId);
 
           if (error) {
-            console.error('Supabase update error:', JSON.stringify(error));
-            updateError = error.message || JSON.stringify(error);
+            console.error('Supabase update error:', error);
           } else {
-            console.log(`✓ Updated status to Pending for process_id: ${processId}, rows:`, data?.length || 0);
-            updateSuccess = data?.length > 0;
+            console.log(`✓ Updated status to Failed for process_id: ${processId}`);
           }
         } else {
-          console.log(`Using SQL query for update, isSupabase: ${db.isSupabase}`);
-          const updateResult = await query(
+          await query(
             'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
-            ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
+            ['Failed', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable to enable processing.', processId]
           );
-          console.log(`✓ Updated status to Pending for process_id: ${processId}, result:`, updateResult);
-          updateSuccess = true;
         }
       } catch (updateErr) {
-        console.error('Error updating status to Pending:', updateErr.message || updateErr);
-        updateError = updateErr.message || String(updateErr);
+        console.error('Error updating status:', updateErr);
       }
 
       res.status(201).json({
         success: true,
-        message: 'Document uploaded. Processing requires PROCESSOR_WEBHOOK_URL configuration.',
+        message: 'Document uploaded but no processor is configured.',
         process_id: processId,
         session_id: sessionId,
-        warning: 'No processor configured',
-        debug: { updateSuccess, updateError, isSupabase: db.isSupabase }
+        warning: 'Set PROCESSOR_WEBHOOK_URL environment variable to enable document processing.'
       });
     }
   } catch (error) {
