@@ -1,0 +1,39 @@
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test and local files
+*.log
+eob-results/
+uploads/
+results/
+*.json
+!config.json
+
+# Git
+.git/
+.gitignore
+
+# Credentials (should be set via environment variables)
+optical-valor-*.json
+*.pem
+*.key
+
+# Documentation
+*.md
+README*
