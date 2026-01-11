@@ -1,56 +1,28 @@
-# Dockerfile for autonomous-cicd-template
-# Multi-stage build for smaller production images
+# DocuParse Backend - Node.js Dockerfile for Google Cloud Run
 
-# ===========================================
-# Stage 1: Builder
-# ===========================================
-FROM python:3.11-slim as builder
+FROM node:18-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies for native modules
+RUN apt-get update && apt-get install -y --no-install-recommends     python3     make     g++     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Copy package files first for better caching
+COPY package*.json ./
 
-# ===========================================
-# Stage 2: Production
-# ===========================================
-FROM python:3.11-slim as production
-
-WORKDIR /app
-
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash appuser
-
-# Copy Python packages from builder
-COPY --from=builder /root/.local /home/appuser/.local
+# Install production dependencies only
+RUN npm ci --only=production
 
 # Copy application code
-COPY src/ ./src/
-COPY scripts/ ./scripts/
+COPY . .
 
-# Set ownership
-RUN chown -R appuser:appuser /app
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=8080
 
-# Switch to non-root user
-USER appuser
+# Expose port
+EXPOSE 8080
 
-# Add local bin to PATH
-ENV PATH=/home/appuser/.local/bin:$PATH
-
-# Environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    APP_ENV=production
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "print('healthy')" || exit 1
-
-# Default command
-CMD ["python", "-m", "src.main"]
+# Start server
+CMD ["node", "server.js"]

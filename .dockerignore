@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Frontend (deployed separately)
+client/
+
+# Python processor (deployed separately)
+python_processor/
+
+# n8n workflows
+n8n-workflows/
+
+# Git
+.git/
+.gitignore
+
+# Tests
+tests/
+*.test.js
+
+# Documentation
+*.md
+!README.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+
+# Temp files
+tmp/
+temp/
+uploads/
+results/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+coverage/
+.nyc_output/
+
+# Credentials
+*.pem
+*.key
+*.json
+!package.json
+!package-lock.json
