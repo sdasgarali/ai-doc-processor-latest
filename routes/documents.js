@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
-const { query, transaction } = require('../config/database');
+const db = require('../config/database');
+const { query, transaction } = db;
 const { verifyToken, checkRole } = require('../middleware/auth');
 const moment = require('moment-timezone');
 const axios = require('axios');
@@ -176,13 +177,30 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
       // No processor URL configured - document uploaded but needs manual processing
       console.log(`⚠️ No PROCESSOR_WEBHOOK_URL configured. Document uploaded but not processed.`);
 
-      // Update status to indicate processing is pending
+      // Update status to indicate processing is pending - use Supabase client directly
       try {
-        const updateResult = await query(
-          'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
-          ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
-        );
-        console.log(`✓ Updated status to Pending for process_id: ${processId}, result:`, updateResult);
+        if (db.isSupabase && db.supabase) {
+          const { data, error } = await db.supabase
+            .from('document_processed')
+            .update({
+              processing_status: 'Pending',
+              error_message: 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.'
+            })
+            .eq('process_id', processId)
+            .select();
+
+          if (error) {
+            console.error('Supabase update error:', error);
+          } else {
+            console.log(`✓ Updated status to Pending for process_id: ${processId}, rows:`, data?.length || 0);
+          }
+        } else {
+          const updateResult = await query(
+            'UPDATE document_processed SET processing_status = ?, error_message = ? WHERE process_id = ?',
+            ['Pending', 'No processor configured. Set PROCESSOR_WEBHOOK_URL environment variable.', processId]
+          );
+          console.log(`✓ Updated status to Pending for process_id: ${processId}, result:`, updateResult);
+        }
       } catch (updateErr) {
         console.error('Error updating status to Pending:', updateErr);
       }
