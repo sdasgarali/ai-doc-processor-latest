@@ -643,7 +643,38 @@ router.post('/mail-logs/:mailLogId/retry', verifyToken, requireAdmin, async (req
 // Get revenue summary (admin only)
 router.get('/reports/revenue', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const revenue = await query('SELECT * FROM monthly_revenue');
+    // Compute monthly revenue from invoices table directly
+    const invoices = await query('SELECT * FROM invoice');
+
+    // Group by year-month and calculate totals
+    const revenueByMonth = {};
+    invoices.forEach(inv => {
+      if (!inv.invoice_date) return;
+      const date = new Date(inv.invoice_date);
+      const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!revenueByMonth[yearMonth]) {
+        revenueByMonth[yearMonth] = {
+          month: yearMonth,
+          total_invoices: 0,
+          total_amount: 0,
+          paid_amount: 0,
+          unpaid_amount: 0
+        };
+      }
+
+      revenueByMonth[yearMonth].total_invoices++;
+      revenueByMonth[yearMonth].total_amount += parseFloat(inv.amount_due) || 0;
+      if (inv.status === 'paid') {
+        revenueByMonth[yearMonth].paid_amount += parseFloat(inv.amount_due) || 0;
+      } else {
+        revenueByMonth[yearMonth].unpaid_amount += parseFloat(inv.amount_due) || 0;
+      }
+    });
+
+    // Convert to array and sort by month DESC
+    const revenue = Object.values(revenueByMonth).sort((a, b) => b.month.localeCompare(a.month));
+
     res.json({
       success: true,
       data: revenue
@@ -661,26 +692,34 @@ router.get('/reports/revenue', verifyToken, requireAdmin, async (req, res) => {
 router.get('/reports/summary', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { month, year } = req.query;
-    
-    let sql = 'SELECT * FROM invoice_summary WHERE 1=1';
-    const params = [];
 
+    // Fetch all invoices and filter/summarize in memory
+    let invoices = await query('SELECT * FROM invoice');
+
+    // Apply filters
     if (month) {
-      sql += ' AND DATE_FORMAT(invoice_date, "%Y-%m") = ?';
-      params.push(month);
+      invoices = invoices.filter(inv => {
+        if (!inv.invoice_date) return false;
+        const date = new Date(inv.invoice_date);
+        const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return yearMonth === month;
+      });
     }
 
     if (year) {
-      sql += ' AND YEAR(invoice_date) = ?';
-      params.push(year);
+      const yr = parseInt(year);
+      invoices = invoices.filter(inv => {
+        if (!inv.invoice_date) return false;
+        return new Date(inv.invoice_date).getFullYear() === yr;
+      });
     }
 
-    sql += ' ORDER BY invoice_date DESC';
+    // Sort by invoice_date DESC
+    invoices.sort((a, b) => new Date(b.invoice_date || 0) - new Date(a.invoice_date || 0));
 
-    const summary = await query(sql, params);
     res.json({
       success: true,
-      data: summary
+      data: invoices
     });
   } catch (error) {
     console.error('Get invoice summary error:', error);
