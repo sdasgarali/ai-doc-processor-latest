@@ -19,6 +19,7 @@ const billingRoutes = require('./routes/billing');
 const processingConfigRoutes = require('./routes/processingConfig');
 const outputProfileRoutes = require('./routes/outputProfiles');
 const categoryCreationRoutes = require('./routes/categoryCreation');
+const ragRoutes = require('./routes/rag');
 
 const app = express();
 const server = http.createServer(app);
@@ -183,6 +184,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/admin/processing-config', processingConfigRoutes);
 app.use('/api/output-profiles', outputProfileRoutes);
 app.use('/api/category-creation', categoryCreationRoutes);
+app.use('/api/rag', ragRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
